@@ -4,31 +4,31 @@ import { useDispatch } from 'react-redux';
 import { logout } from '../../store/slices/authSlice';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-export function SchoolProfileScreen() {
+export function TeacherProfileScreen() {
   const dispatch = useDispatch();
 
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor={COLORS.primaryBg} barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>School Settings</Text>
+        <Text style={styles.headerTitle}>Profile</Text>
       </View>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.hero}>
-          <View style={styles.avatar}><Text style={{fontSize: 40}}>🏫</Text></View>
-          <Text style={styles.name}>Delhi Public School</Text>
-          <Text style={styles.role}>New Delhi, India</Text>
+          <View style={styles.avatar}><Text style={{fontSize: 40}}>👩‍🏫</Text></View>
+          <Text style={styles.name}>Priya Sharma</Text>
+          <Text style={styles.role}>Mathematics Teacher</Text>
         </View>
 
         <View style={styles.section}>
           <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>💳</Text>
-            <Text style={styles.menuText}>Billing & Credits</Text>
+            <Text style={styles.menuIcon}>📄</Text>
+            <Text style={styles.menuText}>My Resume (AI Generated)</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuIcon}>👥</Text>
-            <Text style={styles.menuText}>Manage Users</Text>
+            <Text style={styles.menuIcon}>⚙️</Text>
+            <Text style={styles.menuText}>Settings</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={() => dispatch(logout())}>
