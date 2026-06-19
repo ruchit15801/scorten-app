@@ -1,0 +1,24 @@
+{
+  "name": "scorten",
+  "version": "1.0.0",
+  "description": "AI-Powered Hiring & Professional Growth Platform For Educators",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "yarn workspace @scorten/mobile start",
+    "backend": "yarn workspace @scorten/backend start:dev",
+    "admin": "yarn workspace @scorten/admin dev",
+    "install:all": "yarn install",
+    "clean": "rimraf node_modules apps/*/node_modules packages/*/node_modules"
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}
