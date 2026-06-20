@@ -1,236 +1,215 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, StatusBar, KeyboardAvoidingView, Platform,
+  TextInput, KeyboardAvoidingView, Platform, StatusBar,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const MOCK_CONVERSATIONS = [
-  {
-    id: '1', name: 'Priya Sharma', avatar: '👩‍🏫', role: 'Math Teacher',
-    lastMessage: 'Thank you! I am available for the interview.', time: '10:42 AM', unread: 2,
-  },
-  {
-    id: '2', name: 'Rahul Desai', avatar: '👨‍🏫', role: 'Physics Teacher',
-    lastMessage: 'Could you share the job description again?', time: 'Yesterday', unread: 0,
-  },
-  {
-    id: '3', name: 'Anjali Patel', avatar: '👩‍🏫', role: 'English Teacher',
-    lastMessage: 'Yes, I am open to a full time position.', time: 'Mon', unread: 1,
-  },
+const CONVS = [
+  { id: '1', name: 'Priya Sharma', role: 'Math Teacher', last: 'Available for interview Tuesday', time: '2m ago', unread: 2, online: true, score: 94 },
+  { id: '2', name: 'Rahul Desai', role: 'Physics Teacher', last: 'Thank you for the opportunity', time: '1h ago', unread: 0, online: false, score: 88 },
+  { id: '3', name: 'Anjali Patel', role: 'English Teacher', last: 'I have sent my updated resume', time: 'Yesterday', unread: 1, online: true, score: 91 },
+  { id: '4', name: 'Rohit Mishra', role: 'Chemistry Teacher', last: 'Looking forward to the interview', time: 'Mon', unread: 0, online: false, score: 85 },
 ];
 
-function ConversationCard({ item, onPress }: any) {
+const MOCK_MSGS = [
+  { id: '1', text: "Hello! I saw your profile on Scorten. We'd love to have you join our team.", fromMe: true, time: '10:00' },
+  { id: '2', text: 'Thank you! I am very interested in the Mathematics Teacher position at your school.', fromMe: false, time: '10:05' },
+  { id: '3', text: 'Great! We would like to schedule an AI interview. Are you available this week?', fromMe: true, time: '10:07' },
+  { id: '4', text: 'Available for interview Tuesday', fromMe: false, time: '10:10' },
+];
+
+function ConvItem({ item, active, onPress }: any) {
   return (
-    <TouchableOpacity style={styles.convCard} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={[styles.convItem, active && styles.convItemActive]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       <View style={styles.convAvatar}>
-        <Text style={{ fontSize: 24 }}>{item.avatar}</Text>
+        <Icon name="person" size={20} color={active ? '#FFF' : COLORS.primary} />
+        {item.online && <View style={styles.onlineDot} />}
       </View>
-      <View style={styles.convBody}>
+      <View style={styles.convInfo}>
         <View style={styles.convTop}>
-          <Text style={styles.convName}>{item.name}</Text>
-          <Text style={[styles.convTime, item.unread > 0 && styles.convTimeUnread]}>{item.time}</Text>
+          <Text style={[styles.convName, active && styles.convNameActive]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.convTime, active && { color: '#FFFFFFAA' }]}>{item.time}</Text>
         </View>
-        <Text style={styles.convRole}>{item.role}</Text>
-        <View style={styles.convBottom}>
-          <Text style={[styles.convMsg, item.unread > 0 && styles.convMsgUnread]} numberOfLines={1}>
-            {item.lastMessage}
-          </Text>
-          {item.unread > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{item.unread}</Text>
-            </View>
-          )}
-        </View>
+        <Text style={[styles.convRole, active && { color: '#FFFFFFCC' }]}>{item.role}</Text>
+        <Text style={[styles.convLast, active && { color: '#FFFFFFCC' }]} numberOfLines={1}>{item.last}</Text>
       </View>
+      {item.unread > 0 && !active && (
+        <View style={styles.badge}><Text style={styles.badgeText}>{item.unread}</Text></View>
+      )}
     </TouchableOpacity>
   );
 }
 
-export function SchoolMessagesScreen({ navigation }: any) {
-  const [activeView, setActiveView] = useState<'list' | 'chat'>('list');
-  const [activeConv, setActiveConv] = useState<any>(null);
-  const [input, setInput] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    { id: '1', text: 'Hello Priya! We were impressed by your profile.', fromMe: true, time: '10:30 AM' },
-    { id: '2', text: 'Thank you! I am very excited about this opportunity.', fromMe: false, time: '10:32 AM' },
-    { id: '3', text: 'We would like to schedule an AI interview. Are you available?', fromMe: true, time: '10:35 AM' },
-    { id: '4', text: 'Thank you! I am available for the interview.', fromMe: false, time: '10:42 AM' },
-  ]);
-
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    setChatMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      text: input.trim(),
-      fromMe: true,
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    }]);
-    setInput('');
-  };
-
-  if (activeView === 'chat' && activeConv) {
-    return (
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <StatusBar backgroundColor={COLORS.surface} barStyle="dark-content" />
-        <View style={styles.chatHeader}>
-          <TouchableOpacity onPress={() => setActiveView('list')} style={{ width: 40 }}>
-            <Text style={styles.backArrow}>‹</Text>
-          </TouchableOpacity>
-          <View style={styles.chatHeaderInfo}>
-            <View style={styles.chatAvatar}>
-              <Text style={{ fontSize: 20 }}>{activeConv.avatar}</Text>
-            </View>
-            <View>
-              <Text style={styles.chatName}>{activeConv.name}</Text>
-              <Text style={styles.chatRole}>{activeConv.role}</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.scheduleBtn}>
-            <Text style={styles.scheduleBtnText}>Schedule Interview</Text>
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          data={chatMessages}
-          keyExtractor={m => m.id}
-          contentContainerStyle={styles.msgList}
-          renderItem={({ item }) => (
-            <View style={[styles.bubble, item.fromMe ? styles.bubbleMe : styles.bubbleThem]}>
-              <Text style={[styles.bubbleText, item.fromMe && styles.bubbleTextMe]}>{item.text}</Text>
-              <Text style={[styles.bubbleTime, item.fromMe && styles.bubbleTimeMe]}>{item.time}</Text>
-            </View>
-          )}
-        />
-
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            placeholderTextColor={COLORS.inputPlaceholder}
-            value={input}
-            onChangeText={setInput}
-            multiline
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, !input.trim() && styles.sendBtnOff]}
-            onPress={sendMessage}
-            disabled={!input.trim()}
-          >
-            <Text style={{ fontSize: 20, color: input.trim() ? '#FFF' : COLORS.textMuted }}>➤</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    );
-  }
-
+function Bubble({ msg }: any) {
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.primaryBg} barStyle="dark-content" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Messages</Text>
-        <View style={styles.badge}><Text style={styles.badgeText}>3</Text></View>
+    <View style={[bubble.wrap, msg.fromMe && bubble.wrapMe]}>
+      {!msg.fromMe && (
+        <View style={bubble.avatar}>
+          <Icon name="person" size={16} color={COLORS.primary} />
+        </View>
+      )}
+      <View style={[bubble.box, msg.fromMe ? bubble.me : bubble.them]}>
+        <Text style={[bubble.text, msg.fromMe && bubble.textMe]}>{msg.text}</Text>
+        <Text style={[bubble.time, msg.fromMe && bubble.timeMe]}>{msg.time}</Text>
       </View>
-
-      <FlatList
-        data={MOCK_CONVERSATIONS}
-        keyExtractor={c => c.id}
-        renderItem={({ item }) => (
-          <ConversationCard
-            item={item}
-            onPress={() => { setActiveConv(item); setActiveView('chat'); }}
-          />
-        )}
-        ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: COLORS.border, marginLeft: 80 }} />}
-      />
     </View>
   );
 }
 
+const bubble = StyleSheet.create({
+  wrap: { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end', gap: 8 },
+  wrapMe: { justifyContent: 'flex-end' },
+  avatar: { width: 28, height: 28, borderRadius: 10, backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  box: { maxWidth: '75%', borderRadius: 16, padding: 12 },
+  me: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
+  them: { backgroundColor: COLORS.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: COLORS.border },
+  text: { fontSize: 14, color: COLORS.text, lineHeight: 20 },
+  textMe: { color: '#FFF' },
+  time: { fontSize: 10, color: COLORS.textMuted, marginTop: 4, alignSelf: 'flex-end' },
+  timeMe: { color: '#FFFFFF70' },
+});
+
+export function SchoolMessagesScreen({ navigation }: any) {
+  const [activeId, setActiveId] = useState(CONVS[0].id);
+  const [messages, setMessages] = useState(MOCK_MSGS);
+  const [input, setInput] = useState('');
+  const flatRef = useRef<FlatList>(null);
+  const activeConv = CONVS.find(c => c.id === activeId) || CONVS[0];
+
+  const send = () => {
+    if (!input.trim()) return;
+    setMessages(p => [...p, { id: Date.now().toString(), text: input.trim(), fromMe: true, time: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit', hour12: false }) }]);
+    setInput('');
+    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 80);
+  };
+
+  return (
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
+
+      <View style={styles.mainContainer}>
+        {/* LEFT — Conversation List */}
+        <View style={styles.leftPanel}>
+          <View style={styles.leftHeader}>
+            <Text style={styles.leftTitle}>Messages</Text>
+          </View>
+          <FlatList
+            data={CONVS}
+            keyExtractor={c => c.id}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <ConvItem
+                item={item}
+                active={item.id === activeId}
+                onPress={() => setActiveId(item.id)}
+              />
+            )}
+          />
+        </View>
+
+        {/* RIGHT — Chat Pane */}
+        <View style={styles.rightPanel}>
+          {/* Chat Header */}
+          <View style={styles.chatHeader}>
+            <View style={styles.chatAvatar}>
+              <Icon name="person" size={20} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.chatName}>{activeConv.name}</Text>
+              <Text style={styles.chatRole}>{activeConv.role}</Text>
+            </View>
+            <View style={[styles.aiScoreBadge, { backgroundColor: COLORS.success + '18' }]}>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.success }}>AI {activeConv.score}</Text>
+            </View>
+            <TouchableOpacity style={styles.profileBtn} onPress={() => navigation.navigate('Candidates', { screen: 'CandidateProfile', params: { candidate: { name: activeConv.name, role: activeConv.role, score: activeConv.score } } })}>
+              <Icon name="person" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Messages */}
+          <FlatList
+            ref={flatRef}
+            data={messages}
+            keyExtractor={m => m.id}
+            contentContainerStyle={styles.msgList}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => <Bubble msg={item} />}
+            onLayout={() => flatRef.current?.scrollToEnd({ animated: false })}
+          />
+
+          {/* Input */}
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              placeholder="Type message..."
+              placeholderTextColor={COLORS.inputPlaceholder}
+              value={input}
+              onChangeText={setInput}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity style={[styles.sendBtn, !input.trim() && styles.sendBtnOff]} onPress={send} disabled={!input.trim()}>
+              <Icon name="send" size={18} color={input.trim() ? '#FFF' : COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.screen, paddingTop: 56, paddingBottom: 16,
-    backgroundColor: COLORS.primaryBg,
-  },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.text },
-  badge: {
-    backgroundColor: COLORS.primary, width: 28, height: 28,
-    borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-  },
-  badgeText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+  root: { flex: 1, backgroundColor: COLORS.background },
+  mainContainer: { flex: 1, flexDirection: 'row' },
 
-  convCard: { flexDirection: 'row', alignItems: 'center', padding: SPACING.screen, backgroundColor: COLORS.surface },
-  convAvatar: {
-    width: 54, height: 54, borderRadius: 27,
-    backgroundColor: COLORS.backgroundAlt, alignItems: 'center', justifyContent: 'center', marginRight: 14,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  convBody: { flex: 1 },
-  convTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
-  convName: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  convTime: { fontSize: 12, color: COLORS.textMuted },
-  convTimeUnread: { color: COLORS.primary, fontWeight: '600' },
-  convRole: { fontSize: 12, color: COLORS.primary, fontWeight: '600', marginBottom: 4 },
-  convBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  convMsg: { flex: 1, fontSize: 13, color: COLORS.textSecondary, marginRight: 8 },
-  convMsgUnread: { color: COLORS.text, fontWeight: '600' },
-  unreadBadge: {
-    backgroundColor: COLORS.primary, borderRadius: 10,
-    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6,
-  },
-  unreadText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+  leftPanel: { width: 220, backgroundColor: COLORS.primary, borderRightWidth: 1, borderRightColor: '#FFFFFF20' },
+  leftHeader: { paddingTop: 52, paddingHorizontal: 14, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: '#FFFFFF20' },
+  leftTitle: { fontSize: 18, fontWeight: '800', color: '#FFF' },
 
+  convItem: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: '#FFFFFF15' },
+  convItemActive: { backgroundColor: '#FFFFFF20' },
+  convAvatar: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  onlineDot: { position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: 4.5, backgroundColor: COLORS.success, borderWidth: 1.5, borderColor: COLORS.primary },
+  convInfo: { flex: 1, minWidth: 0 },
+  convTop: { flexDirection: 'row', justifyContent: 'space-between' },
+  convName: { fontSize: 12, fontWeight: '700', color: '#FFFFFFCC', flex: 1 },
+  convNameActive: { color: '#FFF' },
+  convTime: { fontSize: 10, color: '#FFFFFF60' },
+  convRole: { fontSize: 10, color: '#FFFFFF80', marginBottom: 2 },
+  convLast: { fontSize: 11, color: '#FFFFFF60', lineHeight: 14 },
+  badge: { width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.error, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontSize: 10, color: '#FFF', fontWeight: '800' },
+
+  rightPanel: { flex: 1, backgroundColor: '#F5F4FF' },
   chatHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: SPACING.screen, paddingTop: 52, paddingBottom: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingTop: 52, paddingBottom: 12,
     backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  backArrow: { fontSize: 32, color: COLORS.text },
-  chatHeaderInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  chatAvatar: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: COLORS.backgroundAlt, alignItems: 'center', justifyContent: 'center',
-  },
-  chatName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  chatAvatar: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  chatName: { fontSize: 14, fontWeight: '700', color: COLORS.text },
   chatRole: { fontSize: 11, color: COLORS.primary, fontWeight: '600' },
-  scheduleBtn: {
-    backgroundColor: COLORS.primary, paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: RADIUS.md,
-  },
-  scheduleBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+  aiScoreBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: RADIUS.full },
+  profileBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center' },
 
-  msgList: { padding: SPACING.screen, paddingBottom: 20 },
-  bubble: {
-    maxWidth: '75%', borderRadius: RADIUS.xl, padding: 12, marginBottom: 10,
-  },
-  bubbleMe: {
-    backgroundColor: COLORS.primary, alignSelf: 'flex-end',
-    borderBottomRightRadius: 4,
-  },
-  bubbleThem: {
-    backgroundColor: COLORS.surface, alignSelf: 'flex-start',
-    borderBottomLeftRadius: 4, borderWidth: 1, borderColor: COLORS.border,
-  },
-  bubbleText: { fontSize: 15, color: COLORS.text, lineHeight: 22 },
-  bubbleTextMe: { color: '#FFF' },
-  bubbleTime: { fontSize: 10, color: COLORS.textMuted, marginTop: 4, alignSelf: 'flex-end' },
-  bubbleTimeMe: { color: '#FFFFFF99' },
-
-  inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end',
-    paddingHorizontal: SPACING.screen, paddingVertical: 10,
-    backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border, gap: 10,
+  msgList: { padding: 14, paddingBottom: 8 },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
+    padding: 10, backgroundColor: COLORS.surface,
+    borderTopWidth: 1, borderTopColor: COLORS.border,
   },
   input: {
     flex: 1, backgroundColor: COLORS.inputBg, borderRadius: RADIUS.xl,
-    borderWidth: 1, borderColor: COLORS.inputBorder,
-    paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, color: COLORS.text, maxHeight: 100,
+    borderWidth: 1.5, borderColor: COLORS.inputBorder,
+    paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 14, color: COLORS.text, maxHeight: 90,
   },
-  sendBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
-  },
-  sendBtnOff: { backgroundColor: COLORS.border },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  sendBtnOff: { backgroundColor: COLORS.backgroundAlt },
 });

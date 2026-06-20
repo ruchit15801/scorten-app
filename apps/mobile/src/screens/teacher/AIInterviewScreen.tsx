@@ -1,324 +1,298 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, StatusBar,
-  Animated, Dimensions, ScrollView,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  StatusBar, Alert, ActivityIndicator,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const { width } = Dimensions.get('window');
+type Phase = 'intro' | 'recording' | 'done';
 
 const QUESTIONS = [
-  "Hello! I'm your AI interviewer from Scorten. Can you start by telling me about your teaching methodology for Mathematics?",
-  "How do you handle a student who is consistently struggling to understand a concept despite multiple explanations?",
-  "Describe a time you had to adapt your lesson plan on the fly. What happened and how did you manage it?",
-  "What classroom management strategies do you use to maintain engagement in a 45-minute class?",
-  "Why do you want to join Delhi Public School specifically? What makes you a great fit?",
+  'Tell me about your teaching experience and methodology.',
+  'How do you handle a student who is struggling with the subject?',
+  'Describe a challenging classroom situation and how you resolved it.',
+  'How do you incorporate modern technology in your lessons?',
+  'What strategies do you use to keep students engaged?',
 ];
 
-export function AIInterviewScreen({ navigation }: any) {
-  const [phase, setPhase] = useState<'intro' | 'interview' | 'done'>('intro');
-  const [qIndex, setQIndex] = useState(0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [answers, setAnswers] = useState<number[]>([]);
-  const [timer, setTimer] = useState(90);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const timerRef = useRef<any>(null);
+export function AIInterviewScreen({ navigation, route }: any) {
+  const [phase, setPhase] = useState<Phase>('intro');
+  const [qIdx, setQIdx] = useState(0);
+  const [recording, setRecording] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [answers, setAnswers] = useState<boolean[]>([]);
 
-  useEffect(() => {
-    const pulse = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.15, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-      ])
-    );
-    pulse.start();
-    return () => pulse.stop();
-  }, []);
-
-  const startRecording = () => {
-    setIsRecording(true);
-    setTimer(90);
-    timerRef.current = setInterval(() => {
-      setTimer(prev => {
-        if (prev <= 1) { stopRecording(); return 90; }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const stopRecording = () => {
-    setIsRecording(false);
-    clearInterval(timerRef.current);
-    setAnswers(prev => [...prev, qIndex]);
-  };
-
-  const nextQuestion = () => {
-    if (qIndex < QUESTIONS.length - 1) {
-      setQIndex(q => q + 1);
+  const startRecording = () => setRecording(true);
+  const stopAndNext = () => {
+    setRecording(false);
+    const newAns = [...answers, true];
+    setAnswers(newAns);
+    if (qIdx < QUESTIONS.length - 1) {
+      setQIdx(qIdx + 1);
     } else {
-      setPhase('done');
+      setAnalyzing(true);
+      setTimeout(() => { setAnalyzing(false); setPhase('done'); }, 2500);
     }
   };
 
   if (phase === 'intro') {
     return (
-      <View style={styles.container}>
+      <View style={styles.root}>
         <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
-        <ScrollView contentContainerStyle={styles.introScroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.introHeader}>
-            <Animated.View style={[styles.aiOrb, { transform: [{ scale: pulseAnim }] }]}>
-              <Text style={{ fontSize: 48 }}>🤖</Text>
-            </Animated.View>
-            <Text style={styles.introTitle}>AI Interview</Text>
-            <Text style={styles.introSub}>Delhi Public School - Math Teacher</Text>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Icon name="chevron-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>AI Interview</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.introBody} showsVerticalScrollIndicator={false}>
+          <View style={styles.introHero}>
+            <View style={styles.aiCircle}>
+              <Icon name="mic" size={48} color={COLORS.primary} />
+            </View>
+            <Text style={styles.introTitle}>AI-Powered Interview</Text>
+            <Text style={styles.introSub}>Answer {QUESTIONS.length} video questions at your own pace. Our AI evaluates your responses instantly.</Text>
           </View>
 
           <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>Before You Begin</Text>
+            <Text style={styles.infoTitle}>What to Expect</Text>
             {[
-              { icon: '🎙️', text: '5 interview questions, ~2 min each' },
-              { icon: '🌐', text: 'Speak clearly in English or Hindi' },
-              { icon: '📵', text: 'Find a quiet place with good lighting' },
-              { icon: '🤖', text: 'AI analyses tone, content & confidence' },
-              { icon: '📊', text: 'Results shared with school within 24 hrs' },
+              { icon: 'time-outline',        text: 'About 10–15 minutes total' },
+              { icon: 'mic-outline',          text: `${QUESTIONS.length} recorded video questions` },
+              { icon: 'sparkles',             text: 'AI scores: communication, confidence, knowledge' },
+              { icon: 'eye-outline',          text: 'School reviews your recordings' },
+              { icon: 'checkmark-circle',     text: 'Results within 24 hours' },
             ].map((item, i) => (
               <View key={i} style={styles.infoRow}>
-                <Text style={{ fontSize: 18, marginRight: 12 }}>{item.icon}</Text>
+                <Icon name={item.icon} size={18} color={COLORS.primary} />
                 <Text style={styles.infoText}>{item.text}</Text>
               </View>
             ))}
           </View>
 
-          <TouchableOpacity style={styles.startBtn} onPress={() => setPhase('interview')}>
-            <Text style={styles.startBtnText}>Start Interview</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.cancelBtnText}>Not Now</Text>
+          <View style={styles.tipsCard}>
+            <Text style={styles.tipsTitle}>💡 Quick Tips</Text>
+            {['Find a quiet, well-lit space', 'Speak clearly and confidently', 'Look directly at the camera', 'Take a breath before each answer'].map((t, i) => (
+              <View key={i} style={styles.tipRow}>
+                <View style={styles.tipBullet} />
+                <Text style={styles.tipText}>{t}</Text>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.startBtn} onPress={() => setPhase('recording')}>
+            <Icon name="play-circle" size={22} color="#FFF" />
+            <Text style={styles.startBtnText}> Start Interview</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
     );
   }
 
+  if (analyzing) {
+    return (
+      <View style={[styles.root, styles.centerFlex]}>
+        <StatusBar hidden />
+        <View style={styles.analyzingBox}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.analyzingTitle}>AI is analyzing your responses...</Text>
+          <Text style={styles.analyzingSub}>Scoring communication, confidence & subject knowledge</Text>
+        </View>
+      </View>
+    );
+  }
+
   if (phase === 'done') {
     return (
-      <View style={[styles.container, { backgroundColor: COLORS.primary }]}>
+      <View style={[styles.root, styles.centerFlex]}>
         <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
-        <View style={styles.doneContent}>
-          <Text style={{ fontSize: 64, marginBottom: 20 }}>🎉</Text>
-          <Text style={styles.doneTitle}>Interview Completed!</Text>
-          <Text style={styles.doneSub}>
-            Your responses have been submitted. The school will review your AI interview results within 24 hours.
-          </Text>
-
-          <View style={styles.doneStats}>
+        <View style={styles.doneCard}>
+          <Icon name="checkmark-circle" size={72} color={COLORS.success} />
+          <Text style={styles.doneTitle}>Interview Complete!</Text>
+          <Text style={styles.doneSub}>Your responses have been analyzed and sent to the school's hiring team.</Text>
+          <View style={styles.doneScoreRow}>
             {[
-              { label: 'Questions', value: `${QUESTIONS.length}/${QUESTIONS.length}` },
-              { label: 'Avg. Time', value: '1:45 min' },
-              { label: 'AI Score', value: 'Pending' },
-            ].map(stat => (
-              <View key={stat.label} style={styles.doneStat}>
-                <Text style={styles.doneStatValue}>{stat.value}</Text>
-                <Text style={styles.doneStatLabel}>{stat.label}</Text>
+              { label: 'Communication', val: '88' },
+              { label: 'Confidence', val: '82' },
+              { label: 'Knowledge', val: '91' },
+            ].map(s => (
+              <View key={s.label} style={styles.doneScore}>
+                <Text style={styles.doneScoreVal}>{s.val}</Text>
+                <Text style={styles.doneScoreLbl}>{s.label}</Text>
               </View>
             ))}
           </View>
-
           <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.doneBtnText}>Back to Applications</Text>
+            <Text style={styles.doneBtnText}>Done</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
+  // Recording phase
+  const progress = (qIdx / QUESTIONS.length) * 100;
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.background} barStyle="dark-content" />
+    <View style={styles.root}>
+      <StatusBar hidden />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setPhase('intro')}>
-          <Text style={styles.backArrow}>‹</Text>
+      {/* Progress bar */}
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${progress}%` as any }]} />
+      </View>
+
+      {/* Quiz header */}
+      <View style={styles.quizHeader}>
+        <TouchableOpacity onPress={() => Alert.alert('Quit?', 'Your progress will be lost.', [{ text: 'Cancel' }, { text: 'Quit', onPress: () => navigation.goBack() }])}>
+          <Text style={styles.quitText}>Quit</Text>
         </TouchableOpacity>
-        <View style={styles.progressWrap}>
-          <View style={styles.progressBg}>
-            <View style={[styles.progressFill, { width: `${((qIndex + 1) / QUESTIONS.length) * 100}%` }]} />
-          </View>
-          <Text style={styles.progressText}>Q{qIndex + 1} of {QUESTIONS.length}</Text>
+        <Text style={styles.qCounter}>Question {qIdx + 1} of {QUESTIONS.length}</Text>
+        <View style={styles.dotRow}>
+          {QUESTIONS.map((_, i) => (
+            <View key={i} style={[styles.dot, i <= qIdx && styles.dotActive, i < qIdx && styles.dotDone]} />
+          ))}
         </View>
-        {isRecording && (
-          <View style={styles.timerBadge}>
-            <Text style={styles.timerText}>{timer}s</Text>
+      </View>
+
+      {/* Camera placeholder */}
+      <View style={styles.camera}>
+        <Icon name="videocam" size={60} color="rgba(255,255,255,0.3)" />
+        {recording && (
+          <View style={styles.recIndicator}>
+            <View style={styles.recDot} />
+            <Text style={styles.recText}>REC</Text>
           </View>
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.interviewScroll} showsVerticalScrollIndicator={false}>
-        {/* AI Orb */}
-        <View style={styles.orbArea}>
-          <Animated.View style={[styles.aiOrb, { transform: [{ scale: pulseAnim }] }]}>
-            <Text style={{ fontSize: 52 }}>🤖</Text>
-          </Animated.View>
-          <Text style={styles.aiLabel}>AI Interviewer</Text>
-        </View>
+      {/* Question */}
+      <View style={styles.questionBox}>
+        <Text style={styles.questionLabel}>QUESTION {qIdx + 1}</Text>
+        <Text style={styles.questionText}>{QUESTIONS[qIdx]}</Text>
+      </View>
 
-        {/* Question */}
-        <View style={styles.questionCard}>
-          <Text style={styles.questionLabel}>Question {qIndex + 1}</Text>
-          <Text style={styles.questionText}>{QUESTIONS[qIndex]}</Text>
-        </View>
-
-        {/* Recording UI */}
-        <View style={styles.recordSection}>
-          {isRecording ? (
-            <View style={styles.recordingState}>
-              <View style={styles.recordingIndicator}>
-                <View style={styles.recordingDot} />
-                <Text style={styles.recordingText}>Recording... {timer}s remaining</Text>
-              </View>
-              <TouchableOpacity style={styles.stopBtn} onPress={stopRecording}>
-                <Text style={{ fontSize: 24 }}>⏹️</Text>
-                <Text style={styles.stopBtnText}>Stop Recording</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.readyState}>
-              {answers.includes(qIndex) ? (
-                <>
-                  <View style={styles.answeredBadge}>
-                    <Text style={styles.answeredText}>✓ Answer recorded</Text>
-                  </View>
-                  <TouchableOpacity style={styles.rerecordBtn} onPress={startRecording}>
-                    <Text style={styles.rerecordText}>Re-record</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.readyText}>Tap the mic to start answering</Text>
-                  <TouchableOpacity style={styles.micBtn} onPress={startRecording}>
-                    <Text style={{ fontSize: 40 }}>🎙️</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.nextBtn, !answers.includes(qIndex) && styles.nextBtnOff]}
-          onPress={nextQuestion}
-          disabled={!answers.includes(qIndex)}
-        >
-          <Text style={styles.nextBtnText}>
-            {qIndex < QUESTIONS.length - 1 ? 'Next Question →' : 'Finish Interview'}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
+      {/* Controls */}
+      <View style={styles.controls}>
+        {!recording ? (
+          <TouchableOpacity style={styles.recordBtn} onPress={startRecording}>
+            <Icon name="mic" size={28} color="#FFF" />
+            <Text style={styles.recordBtnText}>Tap to Record Answer</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.stopBtn} onPress={stopAndNext}>
+            <Icon name="checkmark" size={28} color="#FFF" />
+            <Text style={styles.stopBtnText}>{qIdx < QUESTIONS.length - 1 ? 'Save & Next' : 'Finish Interview'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-
-  // Intro styles
-  introScroll: { padding: SPACING.screen, paddingTop: 56 },
-  introHeader: { alignItems: 'center', marginBottom: 32 },
-  aiOrb: {
-    width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primaryBg,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 10,
+  root: { flex: 1, backgroundColor: COLORS.background },
+  centerFlex: { justifyContent: 'center', alignItems: 'center', padding: SPACING.screen },
+  header: {
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 16,
+    flexDirection: 'row', alignItems: 'center',
   },
-  introTitle: { fontSize: 28, fontWeight: '800', color: COLORS.text, marginBottom: 8 },
-  introSub: { fontSize: 15, color: COLORS.primary, fontWeight: '600' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: '#FFF', marginRight: 40 },
+
+  introBody: { padding: SPACING.screen, paddingBottom: 40 },
+  introHero: { alignItems: 'center', marginBottom: 24, paddingTop: 16 },
+  aiCircle: {
+    width: 100, height: 100, borderRadius: 30, backgroundColor: COLORS.primaryBg,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
+    borderWidth: 2, borderColor: COLORS.primary + '30',
+  },
+  introTitle: { fontSize: 24, fontWeight: '900', color: COLORS.text, marginBottom: 10, textAlign: 'center' },
+  introSub: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: 10 },
 
   infoCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 24,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  infoCardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 16 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  infoText: { fontSize: 14, color: COLORS.textSecondary, flex: 1 },
+  infoTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, marginBottom: 14 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  infoText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
+
+  tipsCard: {
+    backgroundColor: COLORS.primaryBg, borderRadius: RADIUS.xl, padding: 16, marginBottom: 24,
+    borderWidth: 1, borderColor: COLORS.primary + '30',
+  },
+  tipsTitle: { fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 10 },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  tipBullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  tipText: { fontSize: 13, color: COLORS.primaryDark, lineHeight: 18 },
 
   startBtn: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18, alignItems: 'center', marginBottom: 12,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
   },
-  startBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
-  cancelBtn: { paddingVertical: 12, alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, color: COLORS.textSecondary, fontWeight: '600' },
+  startBtnText: { fontSize: 18, fontWeight: '800', color: '#FFF' },
 
-  // Interview styles
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: SPACING.screen, paddingTop: 52, paddingBottom: 12,
-    backgroundColor: COLORS.background, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    gap: 12,
+  progressTrack: { height: 4, backgroundColor: COLORS.backgroundAlt },
+  progressFill: { height: 4, backgroundColor: COLORS.primary },
+
+  quizHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 56, paddingBottom: 14, backgroundColor: COLORS.surface,
   },
-  backArrow: { fontSize: 32, color: COLORS.text, width: 40 },
-  progressWrap: { flex: 1 },
-  progressBg: { height: 6, backgroundColor: COLORS.backgroundAlt, borderRadius: 3, marginBottom: 4 },
-  progressFill: { height: 6, backgroundColor: COLORS.primary, borderRadius: 3 },
-  progressText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '600' },
-  timerBadge: { backgroundColor: COLORS.error, paddingHorizontal: 12, paddingVertical: 4, borderRadius: RADIUS.full },
-  timerText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
+  quitText: { fontSize: 15, fontWeight: '600', color: COLORS.error },
+  qCounter: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  dotRow: { flexDirection: 'row', gap: 5 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
+  dotActive: { backgroundColor: COLORS.primary },
+  dotDone: { backgroundColor: COLORS.success },
 
-  interviewScroll: { padding: SPACING.screen },
-  orbArea: { alignItems: 'center', marginVertical: 24 },
-  aiLabel: { fontSize: 14, color: COLORS.primary, fontWeight: '700', marginTop: 12 },
-
-  questionCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20, marginBottom: 24,
-    borderWidth: 1, borderColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  camera: {
+    flex: 1, backgroundColor: '#1A1A2E', alignItems: 'center', justifyContent: 'center', margin: 16, borderRadius: RADIUS.xl,
+    position: 'relative',
   },
-  questionLabel: { fontSize: 12, color: COLORS.primary, fontWeight: '700', textTransform: 'uppercase', marginBottom: 8 },
-  questionText: { fontSize: 17, color: COLORS.text, lineHeight: 26, fontWeight: '500' },
+  recIndicator: { position: 'absolute', top: 16, right: 16, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  recDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF4444' },
+  recText: { fontSize: 12, fontWeight: '800', color: '#FFF' },
 
-  recordSection: { marginBottom: 24, alignItems: 'center' },
-  readyState: { alignItems: 'center', gap: 16 },
-  readyText: { fontSize: 15, color: COLORS.textSecondary },
-  micBtn: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: COLORS.primary,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 6,
+  questionBox: { padding: SPACING.screen },
+  questionLabel: { fontSize: 11, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+  questionText: { fontSize: 17, fontWeight: '700', color: COLORS.text, lineHeight: 26 },
+
+  controls: { padding: SPACING.screen, paddingBottom: 32 },
+  recordBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
   },
-  recordingState: { alignItems: 'center', gap: 16 },
-  recordingIndicator: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  recordingDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.error },
-  recordingText: { fontSize: 15, color: COLORS.error, fontWeight: '600' },
+  recordBtnText: { fontSize: 17, fontWeight: '800', color: '#FFF' },
   stopBtn: {
-    alignItems: 'center', backgroundColor: COLORS.errorBg, borderRadius: RADIUS.xl,
-    paddingHorizontal: 28, paddingVertical: 14, gap: 4,
-    borderWidth: 1, borderColor: COLORS.borderError + '40',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: COLORS.success, borderRadius: RADIUS.xl, paddingVertical: 18,
+    shadowColor: COLORS.success, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  stopBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.error },
-  answeredBadge: { backgroundColor: COLORS.successBg, borderRadius: RADIUS.full, paddingHorizontal: 16, paddingVertical: 8 },
-  answeredText: { fontSize: 14, color: COLORS.successDark, fontWeight: '700' },
-  rerecordBtn: { paddingVertical: 8 },
-  rerecordText: { fontSize: 14, color: COLORS.primary, fontWeight: '600' },
+  stopBtnText: { fontSize: 17, fontWeight: '800', color: '#FFF' },
 
-  nextBtn: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18, alignItems: 'center',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
+  analyzingBox: { alignItems: 'center', gap: 16 },
+  analyzingTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
+  analyzingSub: { fontSize: 13, color: COLORS.textSecondary, textAlign: 'center' },
+
+  doneCard: { alignItems: 'center', gap: 16, width: '100%' },
+  doneTitle: { fontSize: 26, fontWeight: '900', color: COLORS.text },
+  doneSub: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 22, paddingHorizontal: 20 },
+  doneScoreRow: {
+    flexDirection: 'row', gap: 16, backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    padding: 20, borderWidth: 1, borderColor: COLORS.border, width: '100%',
   },
-  nextBtnOff: { backgroundColor: COLORS.primaryBg, shadowOpacity: 0, elevation: 0 },
-  nextBtnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-
-  // Done styles
-  doneContent: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.screen },
-  doneTitle: { fontSize: 28, fontWeight: '800', color: '#FFF', textAlign: 'center', marginBottom: 16 },
-  doneSub: { fontSize: 15, color: '#FFFFFFCC', textAlign: 'center', lineHeight: 24, marginBottom: 32 },
-  doneStats: { flexDirection: 'row', gap: 16, marginBottom: 40 },
-  doneStat: { alignItems: 'center', backgroundColor: '#FFFFFF20', borderRadius: RADIUS.lg, padding: 16, flex: 1 },
-  doneStatValue: { fontSize: 18, fontWeight: '800', color: '#FFF', marginBottom: 4 },
-  doneStatLabel: { fontSize: 12, color: '#FFFFFFAA', fontWeight: '600' },
+  doneScore: { flex: 1, alignItems: 'center' },
+  doneScoreVal: { fontSize: 24, fontWeight: '900', color: COLORS.primary, marginBottom: 4 },
+  doneScoreLbl: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', textAlign: 'center' },
   doneBtn: {
-    backgroundColor: '#FFF', borderRadius: RADIUS.xl, paddingVertical: 16, paddingHorizontal: 32, alignItems: 'center',
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 16, paddingHorizontal: 60,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
   },
-  doneBtnText: { fontSize: 16, fontWeight: '700', color: COLORS.primary },
+  doneBtnText: { fontSize: 17, fontWeight: '800', color: '#FFF' },
 });

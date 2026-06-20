@@ -3,23 +3,16 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, ActivityIndicator, Alert,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { useApplyJob } from '../../hooks/useQueries';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-function Tag({ icon, label }: any) {
+function InfoRow({ icon, label, value }: any) {
   return (
-    <View style={styles.tag}>
-      <Text style={styles.tagIcon}>{icon}</Text>
-      <Text style={styles.tagText}>{label}</Text>
-    </View>
-  );
-}
-
-function Section({ title, children }: any) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
+    <View style={styles.infoRow}>
+      <Icon name={icon} size={16} color={COLORS.textMuted} />
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -30,145 +23,147 @@ export function JobDetailScreen({ route, navigation }: any) {
   const [isSaved, setIsSaved] = useState(false);
   const [applied, setApplied] = useState(false);
 
+  const matchScore = job.matchScore || 88;
+  const matchColor = matchScore >= 85 ? COLORS.success : matchScore >= 70 ? COLORS.warning : COLORS.error;
+
   const handleApply = () => {
-    Alert.alert(
-      'Apply for this Job?',
+    Alert.alert('Apply for this Job?',
       `Apply to ${job.title} at ${job.schoolId?.schoolName || 'this school'}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Apply Now',
-          onPress: async () => {
-            try {
-              await applyMutation.mutateAsync({ jobId: job._id });
-              setApplied(true);
-            } catch (e) {
-              setApplied(true); // show success even on mock
-            }
-          },
-        },
+        { text: '🚀 Apply Now', onPress: async () => {
+          try { await applyMutation.mutateAsync({ jobId: job._id }); } catch (e) {}
+          setApplied(true);
+        }},
       ]
     );
   };
 
-  const matchColor = (job.matchScore || 88) >= 85 ? COLORS.success : COLORS.warning;
-
   return (
-    <View style={styles.container}>
+    <View style={styles.root}>
       <StatusBar backgroundColor={COLORS.surface} barStyle="dark-content" />
 
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Text style={styles.backArrow}>‹</Text>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job Details</Text>
         <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSaved(!isSaved)}>
-          <Text style={{ fontSize: 22 }}>{isSaved ? '❤️' : '🤍'}</Text>
+          <Icon name={isSaved ? 'heart' : 'heart-outline'} size={22} color={isSaved ? '#EF4444' : COLORS.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Job Hero Card */}
+        {/* HERO */}
         <View style={styles.heroCard}>
-          <View style={styles.schoolLogoWrap}>
-            <Text style={{ fontSize: 36 }}>🏫</Text>
+          <View style={styles.heroIcon}>
+            <Icon name="school" size={36} color={COLORS.primary} />
           </View>
-          <Text style={styles.jobTitle}>{job.title || 'Mathematics Teacher'}</Text>
-          <Text style={styles.schoolName}>{job.schoolId?.schoolName || 'Delhi Public School'}</Text>
-          <Text style={styles.location}>📍 {job.city || 'New Delhi'}, {job.state || 'Delhi'}</Text>
+          <Text style={styles.heroTitle}>{job.title || 'Mathematics Teacher'}</Text>
+          <Text style={styles.heroSchool}>{job.schoolId?.schoolName || 'Delhi Public School'}</Text>
+          <View style={styles.heroMeta}>
+            <Icon name="location-outline" size={14} color={COLORS.textMuted} />
+            <Text style={styles.heroMetaText}> {job.city || 'New Delhi'}</Text>
+            <Text style={styles.dot}> · </Text>
+            <Icon name="time-outline" size={14} color={COLORS.textMuted} />
+            <Text style={styles.heroMetaText}> {job.jobType?.replace('_', ' ') || 'Full Time'}</Text>
+          </View>
 
-          {/* AI Match */}
-          <View style={[styles.matchRow, { backgroundColor: matchColor + '15', borderColor: matchColor + '30' }]}>
-            <Text style={{ fontSize: 20 }}>🤖</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.matchTitle, { color: matchColor }]}>{job.matchScore || 88}% Profile Match</Text>
-              <Text style={styles.matchSub}>Based on your skills & experience</Text>
-            </View>
+          {/* Match Score */}
+          <View style={[styles.matchRow, { backgroundColor: matchColor + '12', borderColor: matchColor + '30' }]}>
+            <View style={[styles.matchDot, { backgroundColor: matchColor }]} />
+            <Text style={[styles.matchTitle, { color: matchColor }]}>🤖 {matchScore}% Profile Match</Text>
+            <Text style={[styles.matchSub, { color: matchColor + 'AA' }]}>AI-powered analysis</Text>
           </View>
         </View>
 
-        {/* Tags */}
-        <View style={styles.tagsWrap}>
-          <Tag icon="💼" label={(job.jobType || 'full_time').replace('_', ' ')} />
-          <Tag icon="📚" label={job.subjects?.[0] || 'Mathematics'} />
-          <Tag icon="🏛️" label={job.board || 'CBSE'} />
-          <Tag icon="👥" label={`${job.totalApplications || 24} Applied`} />
-        </View>
-
-        {/* Salary */}
+        {/* SALARY + QUICK INFO */}
         <View style={styles.salaryCard}>
-          <Text style={styles.salaryLabel}>Monthly Salary</Text>
-          <Text style={styles.salaryValue}>
-            ₹{((job.salaryMin || 35000) / 1000).toFixed(0)}k – ₹{((job.salaryMax || 55000) / 1000).toFixed(0)}k
-          </Text>
-          <Text style={styles.salarySub}>Negotiable based on experience</Text>
+          <View style={styles.salaryLeft}>
+            <Text style={styles.salaryLabel}>Monthly Salary</Text>
+            <Text style={styles.salaryValue}>
+              ₹{((job.salaryMin || 35000) / 1000).toFixed(0)}k – ₹{((job.salaryMax || 55000) / 1000).toFixed(0)}k
+            </Text>
+            <Text style={styles.salarySub}>Negotiable · CBSE Board</Text>
+          </View>
+          <View style={styles.salaryRight}>
+            <Icon name="cash" size={36} color={COLORS.primary} style={{ opacity: 0.5 }} />
+          </View>
         </View>
 
-        <Section title="Job Description">
+        {/* DETAILS CARD */}
+        <View style={styles.detailCard}>
+          <Text style={styles.cardTitle}>Job Details</Text>
+          <InfoRow icon="briefcase-outline" label="Type" value={(job.jobType || 'full_time').replace('_', ' ')} />
+          <InfoRow icon="book-outline" label="Subject" value={job.subjects?.[0] || 'Mathematics'} />
+          <InfoRow icon="school-outline" label="Board" value={job.board || 'CBSE'} />
+          <InfoRow icon="time-outline" label="Experience" value={`${job.experienceRequired || '2'}+ years`} />
+          <InfoRow icon="people-outline" label="Applicants" value={`${job.totalApplications || 24} applied`} />
+        </View>
+
+        {/* DESCRIPTION */}
+        <View style={styles.detailCard}>
+          <Text style={styles.cardTitle}>Description</Text>
           <Text style={styles.bodyText}>
             We are looking for an experienced and passionate {job.subjects?.[0] || 'Mathematics'} teacher to join our team.
-            The ideal candidate will have strong subject knowledge, excellent communication skills, and a commitment to
-            helping students achieve their best.{'\n\n'}
-            You will be responsible for planning and delivering engaging lessons, assessing student progress, and
-            communicating regularly with parents and senior staff.
+            {'\n\n'}The ideal candidate will have strong subject knowledge, excellent communication skills, and a commitment to student success. You will plan engaging lessons, assess student progress, and collaborate with parents and staff.
           </Text>
-        </Section>
+        </View>
 
-        <Section title="Requirements">
+        {/* REQUIREMENTS */}
+        <View style={styles.detailCard}>
+          <Text style={styles.cardTitle}>Requirements</Text>
           {[
-            `${job.experienceRequired || '2'}+ years of teaching experience`,
-            `B.Ed / M.Ed degree or equivalent`,
-            `Strong knowledge of ${job.subjects?.[0] || 'Mathematics'}`,
-            `Experience with ${job.board || 'CBSE'} curriculum`,
-            `Excellent classroom management skills`,
-          ].map((req, i) => (
-            <View key={i} style={styles.bulletRow}>
-              <View style={styles.bullet} />
-              <Text style={styles.bulletText}>{req}</Text>
+            `${job.experienceRequired || '2'}+ years teaching experience`,
+            'B.Ed / M.Ed degree or equivalent',
+            `Strong ${job.subjects?.[0] || 'subject'} knowledge`,
+            `${job.board || 'CBSE'} curriculum experience`,
+            'Excellent classroom management',
+          ].map((r, i) => (
+            <View key={i} style={styles.reqRow}>
+              <View style={styles.reqDot}>
+                <Icon name="checkmark-circle" size={16} color={COLORS.success} />
+              </View>
+              <Text style={styles.reqText}>{r}</Text>
             </View>
           ))}
-        </Section>
+        </View>
 
-        <Section title="About the School">
-          <View style={styles.schoolInfoCard}>
-            <View style={styles.schoolInfoRow}>
-              <Text style={styles.schoolInfoLabel}>Type</Text>
-              <Text style={styles.schoolInfoValue}>Private CBSE School</Text>
-            </View>
-            <View style={styles.schoolInfoRow}>
-              <Text style={styles.schoolInfoLabel}>Students</Text>
-              <Text style={styles.schoolInfoValue}>3,200+</Text>
-            </View>
-            <View style={styles.schoolInfoRow}>
-              <Text style={styles.schoolInfoLabel}>Rating</Text>
-              <Text style={styles.schoolInfoValue}>⭐ {job.schoolId?.rating || '4.8'} / 5.0</Text>
-            </View>
-            <View style={styles.schoolInfoRow}>
-              <Text style={styles.schoolInfoLabel}>Est.</Text>
-              <Text style={styles.schoolInfoValue}>1972</Text>
-            </View>
-          </View>
-        </Section>
+        {/* SCHOOL INFO */}
+        <View style={styles.detailCard}>
+          <Text style={styles.cardTitle}>About the School</Text>
+          {[
+            { icon: 'school-outline', label: 'Type', value: 'Private CBSE School' },
+            { icon: 'people-outline', label: 'Students', value: '3,200+' },
+            { icon: 'star', label: 'Rating', value: `${job.schoolId?.rating || 4.8} / 5.0` },
+            { icon: 'calendar-outline', label: 'Established', value: '1972' },
+          ].map(item => (
+            <InfoRow key={item.label} icon={item.icon} label={item.label} value={item.value} />
+          ))}
+        </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Footer CTA */}
+      {/* FOOTER */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.shareBtn}>
-          <Text style={{ fontSize: 20 }}>📤</Text>
+          <Icon name="share-outline" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.applyBtn, applied && styles.applyBtnDone, applyMutation.isPending && { opacity: 0.7 }]}
+          style={[styles.applyBtn, applied && styles.applyBtnDone]}
           onPress={applied ? undefined : handleApply}
           disabled={applyMutation.isPending || applied}
-          activeOpacity={0.85}
+          activeOpacity={0.87}
         >
           {applyMutation.isPending
             ? <ActivityIndicator color="#FFF" />
-            : <Text style={styles.applyBtnText}>{applied ? '✓ Applied' : 'Apply Now'}</Text>
+            : <>
+                <Icon name={applied ? 'checkmark-circle' : 'rocket'} size={20} color="#FFF" />
+                <Text style={styles.applyBtnText}>{applied ? ' Applied!' : ' Apply Now'}</Text>
+              </>
           }
         </TouchableOpacity>
       </View>
@@ -177,7 +172,7 @@ export function JobDetailScreen({ route, navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -188,71 +183,68 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.backgroundAlt,
     alignItems: 'center', justifyContent: 'center',
   },
-  backArrow: { fontSize: 28, color: COLORS.text, lineHeight: 32 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
 
   scroll: { padding: SPACING.screen },
 
   heroCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20, marginBottom: 16,
-    alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20,
+    alignItems: 'center', marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.border,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4,
   },
-  schoolLogoWrap: {
-    width: 72, height: 72, borderRadius: 20, backgroundColor: COLORS.primaryBg,
+  heroIcon: {
+    width: 72, height: 72, borderRadius: 22, backgroundColor: COLORS.primaryBg,
     alignItems: 'center', justifyContent: 'center', marginBottom: 14,
     borderWidth: 1, borderColor: COLORS.primary + '20',
   },
-  jobTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text, textAlign: 'center', marginBottom: 6 },
-  schoolName: { fontSize: 15, color: COLORS.textSecondary, marginBottom: 4 },
-  location: { fontSize: 13, color: COLORS.textMuted, marginBottom: 16 },
-
+  heroTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text, textAlign: 'center', marginBottom: 4 },
+  heroSchool: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 8 },
+  heroMeta: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  heroMetaText: { fontSize: 13, color: COLORS.textMuted },
+  dot: { color: COLORS.textMuted, fontSize: 16 },
   matchRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderRadius: RADIUS.lg, padding: 12, borderWidth: 1, width: '100%',
+    flexDirection: 'row', alignItems: 'center', width: '100%',
+    borderRadius: RADIUS.lg, padding: 12, borderWidth: 1,
+    gap: 10,
   },
-  matchTitle: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  matchSub: { fontSize: 12, color: COLORS.textSecondary },
-
-  tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  tag: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 7,
-    borderWidth: 1, borderColor: COLORS.border,
-  },
-  tagIcon: { fontSize: 14 },
-  tagText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
+  matchDot: { width: 8, height: 8, borderRadius: 4 },
+  matchTitle: { fontSize: 14, fontWeight: '800', flex: 1 },
+  matchSub: { fontSize: 11 },
 
   salaryCard: {
-    backgroundColor: COLORS.primaryBg, borderRadius: RADIUS.xl, padding: 16, marginBottom: 16,
+    backgroundColor: COLORS.primaryBg, borderRadius: RADIUS.xl, padding: 16, marginBottom: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderWidth: 1, borderColor: COLORS.primary + '30',
   },
-  salaryLabel: { fontSize: 13, color: COLORS.primary, fontWeight: '700', marginBottom: 4 },
-  salaryValue: { fontSize: 24, fontWeight: '900', color: COLORS.text, marginBottom: 2 },
+  salaryLeft: {},
+  salaryRight: {},
+  salaryLabel: { fontSize: 12, color: COLORS.primary, fontWeight: '700', marginBottom: 4 },
+  salaryValue: { fontSize: 24, fontWeight: '900', color: COLORS.text, marginBottom: 3 },
   salarySub: { fontSize: 12, color: COLORS.textSecondary },
 
-  section: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 18, marginBottom: 16,
+  detailCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: COLORS.border,
   },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text, marginBottom: 12 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 14 },
+
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border, gap: 10,
+  },
+  infoLabel: { width: 90, fontSize: 13, color: COLORS.textSecondary },
+  infoValue: { flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.text },
+
   bodyText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 22 },
 
-  bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
-  bullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary, marginTop: 7 },
-  bulletText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
-
-  schoolInfoCard: {},
-  schoolInfoRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border,
-  },
-  schoolInfoLabel: { fontSize: 14, color: COLORS.textSecondary },
-  schoolInfoValue: { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  reqRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 },
+  reqDot: {},
+  reqText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, lineHeight: 20, marginTop: 1 },
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: COLORS.surface, paddingHorizontal: SPACING.screen, paddingVertical: 16,
+    backgroundColor: COLORS.surface, paddingHorizontal: SPACING.screen, paddingVertical: 14,
     flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: COLORS.border,
     shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 12,
   },
@@ -261,8 +253,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border,
   },
   applyBtn: {
-    flex: 1, backgroundColor: COLORS.primary, borderRadius: RADIUS.xl,
-    alignItems: 'center', justifyContent: 'center', height: 52,
+    flex: 1, backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, height: 52,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
   },
   applyBtnDone: { backgroundColor: COLORS.success },

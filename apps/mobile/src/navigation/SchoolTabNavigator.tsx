@@ -1,7 +1,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
+import { View } from 'react-native';
+import { Icon } from '../components/Icon';
 
 // Screens
 import { SchoolDashboardScreen } from '../screens/school/SchoolDashboardScreen';
@@ -19,6 +20,14 @@ import { COLORS } from '../constants/colors';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+
+const TAB_ICONS: any = {
+  Dashboard: { active: 'grid', inactive: 'grid-outline' },
+  Jobs: { active: 'briefcase', inactive: 'briefcase-outline' },
+  Candidates: { active: 'people', inactive: 'people-outline' },
+  Messages: { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
+  Settings: { active: 'person', inactive: 'person-outline' },
+};
 
 function DashboardStack() {
   return (
@@ -71,31 +80,44 @@ export function SchoolTabNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ color }) => {
-          const icons: any = {
-            Dashboard: '📊',
-            Jobs: '📝',
-            Candidates: '👥',
-            Messages: '💬',
-            Settings: '⚙️',
-          };
-          return <Text style={{ fontSize: 22, color }}>{icons[route.name]}</Text>;
+        tabBarIcon: ({ color, focused }) => {
+          const cfg = TAB_ICONS[route.name];
+          const iconName = focused ? cfg?.active : cfg?.inactive;
+          return (
+            <View style={{ alignItems: 'center' }}>
+              <Icon name={iconName || 'grid-outline'} size={24} color={color} />
+              {focused && (
+                <View style={{
+                  width: 4, height: 4, borderRadius: 2,
+                  backgroundColor: COLORS.primary, marginTop: 3,
+                }} />
+              )}
+            </View>
+          );
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
-          backgroundColor: COLORS.tabBarBg,
-          borderTopColor: COLORS.tabBarBorder,
-          height: 64,
-          paddingBottom: 10,
-          paddingTop: 8,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#F0EDFF',
+          borderTopWidth: 1,
+          height: 68,
+          paddingBottom: 12,
+          paddingTop: 10,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.08,
           shadowRadius: 12,
-          elevation: 12,
+          elevation: 16,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          paddingTop: 2,
+        },
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardStack} />

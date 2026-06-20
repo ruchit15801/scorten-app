@@ -1,224 +1,232 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, StatusBar,
+  TextInput, StatusBar, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const SUBJECTS = ['Mathematics', 'Science', 'English', 'Physics', 'Chemistry', 'Hindi', 'Computer Science'];
-const BOARDS = ['CBSE', 'ICSE', 'State Board', 'IB'];
+const SUBJECTS  = ['Mathematics', 'English', 'Physics', 'Chemistry', 'Science', 'Hindi', 'Computer Science', 'History', 'Biology'];
+const MODES     = ['Online', 'Home Visit', 'School', 'Both'];
+const LEVELS    = ['Class 1–5', 'Class 6–8', 'Class 9–10', 'Class 11–12', 'Competitive Exams', 'All Levels'];
+
+function InputField({ label, value, onChange, placeholder, keyboardType, icon }: any) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={s.group}>
+      <Text style={s.label}>{label}</Text>
+      <View style={[s.inputWrap, focused && s.focused]}>
+        {icon && <Icon name={icon} size={17} color={focused ? COLORS.primary : COLORS.textMuted} style={{ marginRight: 10 }} />}
+        <TextInput
+          style={s.input}
+          placeholder={placeholder}
+          placeholderTextColor={COLORS.inputPlaceholder}
+          value={value}
+          onChangeText={onChange}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          keyboardType={keyboardType || 'default'}
+        />
+      </View>
+    </View>
+  );
+}
+
+function ChipRow({ options, selected, onToggle, single }: any) {
+  return (
+    <View style={s.chipWrap}>
+      {options.map((opt: string) => {
+        const isOn = single ? selected === opt : Array.isArray(selected) && selected.includes(opt);
+        return (
+          <TouchableOpacity key={opt} style={[s.chip, isOn && s.chipOn]} onPress={() => onToggle(opt)}>
+            {isOn && <Icon name="checkmark" size={12} color={COLORS.primary} />}
+            <Text style={[s.chipText, isOn && s.chipTextOn]}>{opt}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  group: { marginBottom: 14 },
+  label: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.6 },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.lg,
+    borderWidth: 1.5, borderColor: COLORS.inputBorder,
+    paddingHorizontal: 13, paddingVertical: 12,
+  },
+  focused: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryUltraLight },
+  input: { flex: 1, fontSize: 15, color: COLORS.text },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.full,
+    paddingHorizontal: 13, paddingVertical: 8, borderWidth: 1.5, borderColor: COLORS.inputBorder,
+  },
+  chipOn: { backgroundColor: COLORS.primaryBg, borderColor: COLORS.primary },
+  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  chipTextOn: { color: COLORS.primary },
+});
 
 export function CreateGigScreen({ navigation }: any) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [rate, setRate] = useState('');
-  const [subject, setSubject] = useState('');
-  const [board, setBoard] = useState('');
-  const [mode, setMode] = useState<'online' | 'offline' | 'hybrid'>('online');
-  const [slots, setSlots] = useState('');
+  const [title, setTitle]       = useState('');
+  const [desc, setDesc]         = useState('');
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [mode, setMode]         = useState('Online');
+  const [levels, setLevels]     = useState<string[]>([]);
+  const [rate, setRate]         = useState('');
+  const [loading, setLoading]   = useState(false);
 
-  const isValid = title && rate && subject;
+  const toggleArr = (arr: string[], setArr: any, val: string) =>
+    setArr(arr.includes(val) ? arr.filter((x: string) => x !== val) : [...arr, val]);
 
-  const handleCreate = () => {
-    if (!isValid) return;
+  const handleCreate = async () => {
+    if (!title.trim()) { Alert.alert('Add a title'); return; }
+    if (!subjects.length) { Alert.alert('Select at least one subject'); return; }
+    if (!rate.trim()) { Alert.alert('Set your hourly rate'); return; }
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 1000));
+    setLoading(false);
+    Alert.alert('🎉 Gig Created!', 'Your gig is now live and visible to schools.');
     navigation.goBack();
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar backgroundColor={COLORS.background} barStyle="dark-content" />
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <View style={styles.backCircle}><Text style={styles.backArrow}>‹</Text></View>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
+          <Icon name="close" size={22} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.title}>Create Gig</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gig Details</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Gig Title*</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Online Math Coaching for Grade 10"
-              placeholderTextColor={COLORS.inputPlaceholder}
-              value={title}
-              onChangeText={setTitle}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Describe your teaching methodology, what students will learn..."
-              placeholderTextColor={COLORS.inputPlaceholder}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Hourly Rate (₹)*</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 500"
-              placeholderTextColor={COLORS.inputPlaceholder}
-              value={rate}
-              onChangeText={setRate}
-              keyboardType="number-pad"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Weekly Slots Available</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 10 hours/week"
-              placeholderTextColor={COLORS.inputPlaceholder}
-              value={slots}
-              onChangeText={setSlots}
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Subject*</Text>
-          <View style={styles.chipRow}>
-            {SUBJECTS.map(s => (
-              <TouchableOpacity
-                key={s}
-                style={[styles.chip, subject === s && styles.chipActive]}
-                onPress={() => setSubject(s)}
-              >
-                <Text style={[styles.chipText, subject === s && styles.chipTextActive]}>{s}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Board</Text>
-          <View style={styles.chipRow}>
-            {BOARDS.map(b => (
-              <TouchableOpacity
-                key={b}
-                style={[styles.chip, board === b && styles.chipActive]}
-                onPress={() => setBoard(b)}
-              >
-                <Text style={[styles.chipText, board === b && styles.chipTextActive]}>{b}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mode</Text>
-          <View style={styles.modeRow}>
-            {(['online', 'offline', 'hybrid'] as const).map(m => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.modeBtn, mode === m && styles.modeBtnActive]}
-                onPress={() => setMode(m)}
-              >
-                <Text style={{ fontSize: 20, marginBottom: 4 }}>
-                  {m === 'online' ? '💻' : m === 'offline' ? '🏫' : '🔄'}
-                </Text>
-                <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>
-                  {m.charAt(0).toUpperCase() + m.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
-
-      <View style={styles.footer}>
+        <Text style={styles.headerTitle}>Create a Gig</Text>
         <TouchableOpacity
-          style={[styles.publishBtn, !isValid && styles.publishBtnOff]}
+          style={[styles.saveBtn, (!title || !subjects.length) && { opacity: 0.5 }]}
           onPress={handleCreate}
-          disabled={!isValid}
+          disabled={loading || !title.trim() || !subjects.length}
         >
-          <Text style={styles.publishBtnText}>Publish Gig</Text>
+          {loading ? <ActivityIndicator size="small" color={COLORS.primary} /> : <Text style={styles.saveBtnText}>Publish</Text>}
         </TouchableOpacity>
       </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+        {/* Tip Banner */}
+        <View style={styles.tipBanner}>
+          <Icon name="bulb-outline" size={22} color="#92400E" />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.tipTitle}>💡 Gig Tips</Text>
+            <Text style={styles.tipSub}>Gigs with demo videos get 5x more orders. Use a clear title with your subject and level.</Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <InputField label="Gig Title" value={title} onChange={setTitle} placeholder="e.g. Online Math Tutor for Class 10–12" icon="briefcase-outline" />
+
+          <View style={s.group}>
+            <Text style={s.label}>Description</Text>
+            <View style={[s.inputWrap, { alignItems: 'flex-start', paddingTop: 12 }]}>
+              <TextInput
+                style={[s.input, { minHeight: 90, textAlignVertical: 'top' }]}
+                placeholder="Describe your tutoring style, methodology, and what students will learn..."
+                placeholderTextColor={COLORS.inputPlaceholder}
+                value={desc}
+                onChangeText={setDesc}
+                multiline
+              />
+            </View>
+          </View>
+
+          <View style={s.group}>
+            <Text style={s.label}>Subjects</Text>
+            <ChipRow options={SUBJECTS} selected={subjects} onToggle={(v: string) => toggleArr(subjects, setSubjects, v)} />
+          </View>
+
+          <View style={s.group}>
+            <Text style={s.label}>Teaching Mode</Text>
+            <ChipRow options={MODES} selected={mode} onToggle={setMode} single />
+          </View>
+
+          <View style={s.group}>
+            <Text style={s.label}>Class Levels</Text>
+            <ChipRow options={LEVELS} selected={levels} onToggle={(v: string) => toggleArr(levels, setLevels, v)} />
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <InputField label="Hourly Rate (₹/hr)" value={rate} onChange={setRate} placeholder="e.g. 500" keyboardType="number-pad" icon="cash-outline" />
+
+          <View style={styles.previewBox}>
+            <View style={styles.previewLeft}>
+              <Text style={styles.previewTitle}>{title || 'Your gig title...'}</Text>
+              <Text style={styles.previewSubject}>{subjects.join(', ') || 'Subject'} · {mode}</Text>
+            </View>
+            <View style={styles.previewRate}>
+              <Text style={styles.previewRateText}>₹{rate || '—'}/hr</Text>
+            </View>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.createBtn} onPress={handleCreate} disabled={loading}>
+          {loading
+            ? <ActivityIndicator color="#FFF" />
+            : <>
+                <Icon name="checkmark-circle" size={20} color="#FFF" />
+                <Text style={styles.createBtnText}> Publish Gig</Text>
+              </>
+          }
+        </TouchableOpacity>
+
+        <View style={{ height: 24 }} />
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.screen, paddingTop: 56, paddingBottom: 16,
-    backgroundColor: COLORS.background, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  backBtn: {},
-  backCircle: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surface,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border,
-  },
-  backArrow: { fontSize: 26, color: COLORS.text, lineHeight: 30 },
-  title: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  closeBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: '#FFF' },
+  saveBtn: { backgroundColor: '#FFF', paddingHorizontal: 18, paddingVertical: 8, borderRadius: RADIUS.full },
+  saveBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
 
   scroll: { padding: SPACING.screen },
 
-  section: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 20,
+  tipBanner: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7', borderRadius: RADIUS.xl, padding: 14, marginBottom: 14,
+    borderWidth: 1, borderColor: '#FDE68A',
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 16 },
+  tipTitle: { fontSize: 13, fontWeight: '800', color: '#92400E', marginBottom: 3 },
+  tipSub: { fontSize: 12, color: '#92400E', lineHeight: 18 },
 
-  inputGroup: { marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
-  input: {
-    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.lg,
-    borderWidth: 1.5, borderColor: COLORS.inputBorder,
-    paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: COLORS.text,
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: COLORS.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  textArea: { height: 100, paddingTop: 14 },
 
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.full,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderWidth: 1.5, borderColor: COLORS.inputBorder,
+  previewBox: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.backgroundAlt, borderRadius: RADIUS.xl, padding: 14, gap: 12,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  chipActive: { backgroundColor: COLORS.primaryBg, borderColor: COLORS.primary },
-  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-  chipTextActive: { color: COLORS.primary },
+  previewLeft: { flex: 1 },
+  previewTitle: { fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
+  previewSubject: { fontSize: 11, color: COLORS.primary, fontWeight: '600' },
+  previewRate: { backgroundColor: COLORS.primaryBg, paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.xl },
+  previewRateText: { fontSize: 14, fontWeight: '900', color: COLORS.primary },
 
-  modeRow: { flexDirection: 'row', gap: 12 },
-  modeBtn: {
-    flex: 1, alignItems: 'center', padding: 14,
-    borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: COLORS.inputBorder,
-    backgroundColor: COLORS.inputBg,
+  createBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
   },
-  modeBtnActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryBg },
-  modeText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-  modeTextActive: { color: COLORS.primary },
-
-  footer: {
-    padding: SPACING.screen, backgroundColor: COLORS.surface,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-  },
-  publishBtn: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18, alignItems: 'center',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
-  },
-  publishBtnOff: { backgroundColor: COLORS.primaryBg, shadowOpacity: 0, elevation: 0 },
-  publishBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
+  createBtnText: { fontSize: 17, fontWeight: '800', color: '#FFF' },
 });

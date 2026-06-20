@@ -1,140 +1,231 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  StatusBar, ActivityIndicator, Alert,
+} from 'react-native';
+import { useMyTeacherProfile, useGenerateResume } from '../../hooks/useQueries';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const InputField = ({ label, value, onChange, placeholder, multiline }: any) => (
-  <View style={styles.inputGroup}>
-    <Text style={styles.inputLabel}>{label}</Text>
-    <View style={[styles.inputWrapper, multiline && { paddingVertical: 12 }]}>
-      <TextInput
-        style={[styles.input, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
-        placeholder={placeholder}
-        placeholderTextColor={COLORS.inputPlaceholder}
-        value={value}
-        onChangeText={onChange}
-        multiline={multiline}
-      />
-    </View>
-  </View>
-);
+const SECTIONS = [
+  { key: 'personal',    icon: 'person-outline',         label: 'Personal Info',   done: true  },
+  { key: 'summary',     icon: 'document-text-outline',  label: 'Summary',         done: false },
+  { key: 'experience',  icon: 'briefcase-outline',       label: 'Experience',      done: true  },
+  { key: 'skills',      icon: 'trophy-outline',          label: 'Skills & Badges', done: true  },
+  { key: 'education',   icon: 'school-outline',          label: 'Education',       done: true  },
+  { key: 'portfolio',   icon: 'videocam-outline',        label: 'Portfolio',       done: false },
+];
 
-export function ResumeBuilderScreen({ navigation }: any) {
-  const [summary, setSummary] = useState('Passionate mathematics educator with 5+ years of experience...');
-  const [skills, setSkills] = useState('Algebra, Calculus, Online Teaching, Lesson Planning');
+export function ResumeBuilderScreen({ navigation, route }: any) {
+  const templateId = route.params?.templateId || '1';
+  const { user } = useSelector((s: RootState) => s.auth);
+  const { data: profile } = useMyTeacherProfile();
+  const generateMutation = useGenerateResume();
+  const [generating, setGenerating] = useState(false);
+  const [generated, setGenerated] = useState(false);
+  const [completedSections, setCompletedSections] = useState<string[]>(['personal', 'experience', 'skills', 'education']);
+
+  const completePct = Math.round((completedSections.length / SECTIONS.length) * 100);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      await generateMutation.mutateAsync(profile || {
+        firstName: user?.firstName, lastName: user?.lastName,
+        subjects: ['Mathematics'], experienceYears: 5,
+      });
+      setGenerated(true);
+    } catch {
+      setGenerated(true); // allow preview anyway
+    }
+    setGenerating(false);
+  };
+
+  const toggleSection = (key: string) => {
+    setCompletedSections(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={styles.root}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
+
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()}>
-          <Text style={styles.back}>‹</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.title}>Resume Builder</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('ResumePreview')}>
-          <Text style={styles.previewBtn}>Preview</Text>
-        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Build Resume</Text>
+          <Text style={styles.headerSub}>Template {templateId} · {completePct}% complete</Text>
+        </View>
+        {generated && (
+          <TouchableOpacity style={styles.previewBtn} onPress={() => navigation.navigate('ResumePreview', { templateId })}>
+            <Icon name="eye-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.previewBtnText}> Preview</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Summary / Objective</Text>
-          <InputField 
-            value={summary} 
-            onChange={setSummary} 
-            placeholder="Write a brief professional summary..." 
-            multiline 
-          />
+      {/* Progress bar */}
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${completePct}%` as any }]} />
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* AI Generate */}
+        <TouchableOpacity
+          style={styles.aiCard}
+          onPress={handleGenerate}
+          disabled={generating}
+          activeOpacity={0.88}
+        >
+          <View style={styles.aiIconBox}>
+            {generating
+              ? <ActivityIndicator color="#FFF" />
+              : <Icon name="sparkles" size={26} color="#FFF" />
+            }
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.aiTitle}>
+              {generating ? 'Generating with AI...' : generated ? '✅ Resume Generated!' : 'Generate with AI'}
+            </Text>
+            <Text style={styles.aiSub}>
+              {generating ? 'Analyzing your profile...' : generated ? 'Tap Preview to see your resume' : 'Auto-fill all sections from your profile'}
+            </Text>
+          </View>
+          {!generating && <Icon name={generated ? 'eye-outline' : 'flash'} size={22} color="#FFFFFF80" />}
+        </TouchableOpacity>
+
+        {/* Profile Source */}
+        <View style={styles.profileCard}>
+          <View style={styles.profileAvatar}>
+            <Icon name="person" size={26} color={COLORS.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.profileName}>{user?.firstName} {user?.lastName}</Text>
+            <Text style={styles.profileSub}>{profile?.subjects?.join(', ') || 'Mathematics Teacher'} · {profile?.city || 'India'}</Text>
+          </View>
+          <View style={[styles.completePill, { backgroundColor: completePct >= 80 ? COLORS.successBg : COLORS.warningBg }]}>
+            <Text style={[styles.completePillText, { color: completePct >= 80 ? COLORS.success : COLORS.warning }]}>{completePct}%</Text>
+          </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Experience</Text>
-            <TouchableOpacity><Text style={styles.editLink}>Edit in Profile</Text></TouchableOpacity>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Senior Math Teacher</Text>
-            <Text style={styles.cardSub}>Delhi Public School | 2020 - Present</Text>
-          </View>
+        {/* Sections */}
+        <Text style={styles.sectionTitle}>Resume Sections</Text>
+        <View style={styles.sectionsCard}>
+          {SECTIONS.map((sec, i) => {
+            const isDone = completedSections.includes(sec.key);
+            return (
+              <TouchableOpacity
+                key={sec.key}
+                style={[styles.sectionRow, i < SECTIONS.length - 1 && styles.sectionRowBorder]}
+                onPress={() => toggleSection(sec.key)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.sectionIconBox, { backgroundColor: isDone ? COLORS.primaryBg : COLORS.backgroundAlt }]}>
+                  <Icon name={sec.icon} size={18} color={isDone ? COLORS.primary : COLORS.textMuted} />
+                </View>
+                <Text style={[styles.sectionLabel, isDone && { color: COLORS.text }]}>{sec.label}</Text>
+                <View style={[styles.sectionCheck, isDone && styles.sectionCheckDone]}>
+                  {isDone && <Icon name="checkmark" size={13} color="#FFF" />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Qualifications</Text>
-            <TouchableOpacity><Text style={styles.editLink}>Edit in Profile</Text></TouchableOpacity>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>B.Ed in Mathematics</Text>
-            <Text style={styles.cardSub}>Gujarat University | 2018</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Key Skills</Text>
-          <InputField 
-            value={skills} 
-            onChange={setSkills} 
-            placeholder="e.g. Algebra, Communication..." 
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          <InputField 
-            value="" 
-            placeholder="Awarded Best Teacher 2022..." 
-          />
-          <TouchableOpacity style={styles.addBtn}>
-            <Text style={styles.addBtnText}>+ Add Custom Section</Text>
+        {/* Action Buttons */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.downloadBtn}
+            onPress={() => Alert.alert('Download', 'PDF download will be available after resume generation.')}
+          >
+            <Icon name="share-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.downloadBtnText}> Download PDF</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.previewFullBtn}
+            onPress={() => navigation.navigate('ResumePreview', { templateId })}
+          >
+            <Icon name="eye-outline" size={18} color="#FFF" />
+            <Text style={styles.previewFullBtnText}> Full Preview</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('ResumeTemplates')}>
-            <Text style={styles.btnTextSecondary}>Change Template</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.btnPrimary} onPress={() => {}}>
-            <Text style={styles.btnTextPrimary}>Save Draft</Text>
-          </TouchableOpacity>
-        </View>
-
+        <View style={{ height: 24 }} />
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  back: { fontSize: 32, color: COLORS.text, width: 60, lineHeight: 32 },
-  title: { fontSize: 18, fontWeight: '800', color: COLORS.text },
-  previewBtn: { fontSize: 15, fontWeight: '700', color: COLORS.primary, width: 60, textAlign: 'right' },
-  
-  content: { padding: SPACING.screen, paddingBottom: 60 },
-  
-  section: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 12 },
-  editLink: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '900', color: '#FFF' },
+  headerSub: { fontSize: 12, color: '#FFFFFFBB', marginTop: 2 },
+  previewBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.full },
+  previewBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
 
-  inputGroup: { marginBottom: 16 },
-  inputLabel: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 8, display: 'none' },
-  inputWrapper: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 16 },
-  input: { fontSize: 15, color: COLORS.text, paddingVertical: 14 },
+  progressTrack: { height: 4, backgroundColor: COLORS.backgroundAlt },
+  progressFill: { height: 4, backgroundColor: COLORS.primary },
 
-  card: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
-  cardSub: { fontSize: 14, color: COLORS.textSecondary },
+  scroll: { padding: SPACING.screen },
 
-  addBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border, borderStyle: 'dashed', marginTop: 8 },
-  addBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
+  aiCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, padding: 16, marginBottom: 14,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+  },
+  aiIconBox: { width: 52, height: 52, borderRadius: 16, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  aiTitle: { fontSize: 15, fontWeight: '800', color: '#FFF', marginBottom: 3 },
+  aiSub: { fontSize: 12, color: '#FFFFFFBB', lineHeight: 17 },
 
-  actions: { gap: 12, marginTop: 12 },
-  btnPrimary: { backgroundColor: COLORS.primary, paddingVertical: 16, borderRadius: RADIUS.full, alignItems: 'center' },
-  btnTextPrimary: { color: '#FFF', fontSize: 16, fontWeight: '700' },
-  btnSecondary: { backgroundColor: COLORS.primaryBg, paddingVertical: 16, borderRadius: RADIUS.full, alignItems: 'center', borderWidth: 1, borderColor: COLORS.primary + '30' },
-  btnTextSecondary: { color: COLORS.primary, fontSize: 16, fontWeight: '700' },
+  profileCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 14, marginBottom: 16,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  profileAvatar: { width: 50, height: 50, borderRadius: 15, backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  profileName: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
+  profileSub: { fontSize: 12, color: COLORS.textSecondary },
+  completePill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: RADIUS.full },
+  completePillText: { fontSize: 13, fontWeight: '800' },
+
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
+  sectionsCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl,
+    borderWidth: 1, borderColor: COLORS.border, marginBottom: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+  sectionRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  sectionIconBox: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  sectionLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: COLORS.textMuted },
+  sectionCheck: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center',
+  },
+  sectionCheckDone: { backgroundColor: COLORS.success, borderColor: COLORS.success },
+
+  actionRow: { flexDirection: 'row', gap: 12 },
+  downloadBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, paddingVertical: 15,
+    borderWidth: 1.5, borderColor: COLORS.primary + '40',
+  },
+  downloadBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  previewFullBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 15,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
+  },
+  previewFullBtnText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
 });

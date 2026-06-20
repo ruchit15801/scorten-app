@@ -1,91 +1,172 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
+import {
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  StatusBar, Alert, Dimensions,
+} from 'react-native';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
+const { width } = Dimensions.get('window');
+const CARD_W = (width - SPACING.screen * 2 - 12) / 2;
+
 const TEMPLATES = [
-  { id: 1, name: 'Modern Minimal', color: '#E8F0FE', description: 'Clean and professional layout.' },
-  { id: 2, name: 'Creative Classic', color: '#FCE8E6', description: 'Stand out with elegant typography.' },
-  { id: 3, name: 'Executive Pro', color: '#E6F4EA', description: 'Best for experienced educators.' },
-  { id: 4, name: 'Tech Innovator', color: '#F3E5F5', description: 'Highlight your technical skills.' },
+  { id: '1', name: 'Classic Professional', color: '#1A1A2E',  accent: '#7B61FF', preview: 'serif',    popular: true  },
+  { id: '2', name: 'Modern Minimal',       color: '#FFFFFF',  accent: '#10B981', preview: 'sans',     popular: false },
+  { id: '3', name: 'Bold Creative',        color: '#7B61FF',  accent: '#FFFFFF', preview: 'display',  popular: true  },
+  { id: '4', name: 'Clean Corporate',      color: '#F8FAFC',  accent: '#1E293B', preview: 'system',   popular: false },
+  { id: '5', name: 'Academic Scholar',     color: '#1E293B',  accent: '#F59E0B', preview: 'serif',    popular: false },
+  { id: '6', name: 'Vibrant Teacher',      color: '#EDE9FF',  accent: '#7B61FF', preview: 'rounded',  popular: true  },
 ];
 
-export function ResumeTemplatesScreen({ navigation }: any) {
-  const [useProfileData, setUseProfileData] = useState(true);
-
+function TemplateCard({ t, selected, onSelect }: any) {
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack?.()}>
-          <Text style={styles.back}>‹</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Resume Templates</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.toggleRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.toggleTitle}>Use My Profile Data</Text>
-            <Text style={styles.toggleDesc}>Auto-fill resume with profile info</Text>
+    <TouchableOpacity
+      style={[styles.templateCard, { width: CARD_W }, selected && styles.templateCardSelected]}
+      onPress={() => onSelect(t.id)}
+      activeOpacity={0.88}
+    >
+      {/* Template preview */}
+      <View style={[styles.templatePreview, { backgroundColor: t.color, borderColor: t.accent + '60' }]}>
+        {/* Simulated resume layout */}
+        <View style={[styles.previewHeader, { backgroundColor: t.accent }]}>
+          <View style={[styles.previewAvatar, { borderColor: t.color }]} />
+          <View style={styles.previewNameLines}>
+            <View style={[styles.previewLine, { width: 60, backgroundColor: t.color === '#FFFFFF' || t.color === '#F8FAFC' || t.color === '#EDE9FF' ? '#000' : '#FFF', opacity: 0.9 }]} />
+            <View style={[styles.previewLine, { width: 40, marginTop: 4, backgroundColor: t.color === '#FFFFFF' || t.color === '#F8FAFC' || t.color === '#EDE9FF' ? '#000' : '#FFF', opacity: 0.5 }]} />
           </View>
-          <Switch
-            value={useProfileData}
-            onValueChange={setUseProfileData}
-            trackColor={{ false: COLORS.border, true: COLORS.primary }}
-            thumbColor={'#FFF'}
-          />
         </View>
-
-        <Text style={styles.sectionTitle}>Select a Design</Text>
-        <View style={styles.grid}>
-          {TEMPLATES.map(t => (
-            <TouchableOpacity 
-              key={t.id} 
-              style={styles.card}
-              onPress={() => navigation.navigate('ResumeBuilder', { templateId: t.id, useProfileData })}
-            >
-              <View style={[styles.templatePreview, { backgroundColor: t.color }]}>
-                <Text style={styles.previewIcon}>📄</Text>
-              </View>
-              <Text style={styles.templateName}>{t.name}</Text>
-              <Text style={styles.templateDesc}>{t.description}</Text>
-            </TouchableOpacity>
+        <View style={styles.previewBody}>
+          {[70, 55, 80, 45].map((w, i) => (
+            <View key={i} style={[styles.previewBodyLine, {
+              width: `${w}%` as any,
+              backgroundColor: t.color === '#FFFFFF' || t.color === '#F8FAFC' || t.color === '#EDE9FF' ? '#333' : '#FFF',
+              opacity: i === 0 ? 0.8 : 0.4,
+            }]} />
           ))}
         </View>
-      </ScrollView>
+        {t.popular && (
+          <View style={[styles.popularBadge, { backgroundColor: t.accent }]}>
+            <Text style={[styles.popularText, { color: t.color === '#FFFFFF' || t.color === '#F8FAFC' || t.color === '#EDE9FF' ? t.accent === '#1E293B' ? '#FFF' : t.accent : '#FFF' }]}>★ Popular</Text>
+          </View>
+        )}
+        {selected && (
+          <View style={styles.selectedOverlay}>
+            <Icon name="checkmark-circle" size={28} color={COLORS.primary} />
+          </View>
+        )}
+      </View>
+      <Text style={[styles.templateName, selected && styles.templateNameActive]} numberOfLines={1}>{t.name}</Text>
+    </TouchableOpacity>
+  );
+}
+
+export function ResumeTemplatesScreen({ navigation }: any) {
+  const [selected, setSelected] = useState('1');
+
+  return (
+    <View style={styles.root}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
+
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Resume Templates</Text>
+          <Text style={styles.headerSub}>Choose a template to get started</Text>
+        </View>
+      </View>
+
+      {/* AI Banner */}
+      <View style={styles.aiBanner}>
+        <View style={styles.aiIconBox}>
+          <Icon name="sparkles" size={22} color="#FFF" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.aiTitle}>AI Resume Builder</Text>
+          <Text style={styles.aiSub}>Your profile auto-fills all sections in seconds</Text>
+        </View>
+        <View style={styles.aiTimeBadge}>
+          <Icon name="flash" size={13} color="#F59E0B" />
+          <Text style={styles.aiTimeText}> 60 sec</Text>
+        </View>
+      </View>
+
+      <FlatList
+        data={TEMPLATES}
+        numColumns={2}
+        keyExtractor={t => t.id}
+        contentContainerStyle={styles.grid}
+        columnWrapperStyle={styles.row}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <TemplateCard t={item} selected={selected === item.id} onSelect={setSelected} />
+        )}
+        ListFooterComponent={
+          <TouchableOpacity
+            style={styles.useBtn}
+            onPress={() => navigation.navigate('ResumeBuilder', { templateId: selected })}
+          >
+            <Icon name="sparkles" size={20} color="#FFF" />
+            <Text style={styles.useBtnText}> Build with AI · Template {selected}</Text>
+          </TouchableOpacity>
+        }
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  back: { fontSize: 32, color: COLORS.text, width: 40, lineHeight: 32 },
-  title: { fontSize: 18, fontWeight: '800', color: COLORS.text },
-  
-  content: { padding: SPACING.screen, paddingBottom: 60 },
-  
-  toggleRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: COLORS.surface, padding: 16, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 24,
-  },
-  toggleTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
-  toggleDesc: { fontSize: 13, color: COLORS.textSecondary },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '900', color: '#FFF' },
+  headerSub: { fontSize: 12, color: '#FFFFFFBB', marginTop: 2 },
 
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 16 },
-  
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  card: {
-    width: '48%', backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 16, overflow: 'hidden',
+  aiBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: COLORS.surface, margin: SPACING.screen, marginBottom: 8,
+    borderRadius: RADIUS.xl, padding: 14,
+    borderWidth: 1.5, borderColor: COLORS.primary + '30',
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
   },
-  templatePreview: { height: 160, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  previewIcon: { fontSize: 40 },
-  templateName: { fontSize: 14, fontWeight: '700', color: COLORS.text, padding: 12, paddingBottom: 4 },
-  templateDesc: { fontSize: 12, color: COLORS.textSecondary, paddingHorizontal: 12, paddingBottom: 12, lineHeight: 16 },
+  aiIconBox: { width: 46, height: 46, borderRadius: 14, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  aiTitle: { fontSize: 14, fontWeight: '800', color: COLORS.text, marginBottom: 2 },
+  aiSub: { fontSize: 12, color: COLORS.textSecondary },
+  aiTimeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFBEB', paddingHorizontal: 10, paddingVertical: 5, borderRadius: RADIUS.full },
+  aiTimeText: { fontSize: 12, fontWeight: '700', color: '#92400E' },
+
+  grid: { paddingHorizontal: SPACING.screen, paddingBottom: 24 },
+  row: { gap: 12, marginBottom: 12 },
+
+  templateCard: { borderRadius: RADIUS.xl, overflow: 'hidden', borderWidth: 2, borderColor: 'transparent' },
+  templateCardSelected: { borderColor: COLORS.primary },
+  templatePreview: {
+    height: 160, borderWidth: 1, borderRadius: RADIUS.lg, overflow: 'hidden',
+    position: 'relative',
+  },
+  previewHeader: { padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  previewAvatar: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, backgroundColor: 'rgba(255,255,255,0.3)' },
+  previewNameLines: { flex: 1 },
+  previewLine: { height: 5, borderRadius: 2.5 },
+  previewBody: { padding: 10, gap: 6 },
+  previewBodyLine: { height: 4, borderRadius: 2 },
+  popularBadge: { position: 'absolute', top: 0, right: 0, paddingHorizontal: 8, paddingVertical: 3 },
+  popularText: { fontSize: 9, fontWeight: '800' },
+  selectedOverlay: {
+    position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.7)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  templateName: { padding: 8, paddingBottom: 0, fontSize: 12, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
+  templateNameActive: { color: COLORS.primary },
+
+  useBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18, marginTop: 8,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
+  },
+  useBtnText: { fontSize: 17, fontWeight: '800', color: '#FFF' },
 });

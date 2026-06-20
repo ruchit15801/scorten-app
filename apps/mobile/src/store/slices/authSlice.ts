@@ -4,8 +4,16 @@ import { authAPI } from '../../services/api/auth.api';
 
 interface User {
   _id: string;
-  firstName: string;
-  lastName: string;
+  // Teacher fields
+  firstName?: string;
+  lastName?: string;
+  // School fields
+  schoolName?: string;
+  affiliationNumber?: string;
+  board?: string;
+  principalName?: string;
+  city?: string;
+  // Common
   email: string;
   phone?: string;
   role: 'teacher' | 'school' | 'parent' | 'admin';
@@ -16,6 +24,13 @@ interface User {
   walletBalance: number;
 }
 
+// Helper to persist auth data
+const persistAuth = (data: { accessToken: string; refreshToken: string; role: string }) => {
+  AsyncStorage.setItem('accessToken', data.accessToken);
+  AsyncStorage.setItem('refreshToken', data.refreshToken);
+  AsyncStorage.setItem('userRole', data.role); // persist role for route restore
+};
+
 interface AuthState {
   user: User | null;
   accessToken: string | null;
@@ -23,6 +38,8 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  lastRegisteredSCortenId: string | null;
+  pendingSuccessScreen: boolean; // true after school registers → show success before dashboard
 }
 
 const initialState: AuthState = {
@@ -32,6 +49,8 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  lastRegisteredSCortenId: null,
+  pendingSuccessScreen: false,
 };
 
 // ─── Async Thunks ─────────────────────────────────────────────────────────────
@@ -107,9 +126,15 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       AsyncStorage.removeItem('accessToken');
       AsyncStorage.removeItem('refreshToken');
+      AsyncStorage.removeItem('userRole');
     },
     clearError: (state) => {
       state.error = null;
+    },
+    // Call this when school taps "Go to Dashboard" from the success screen
+    clearSuccessScreen: (state) => {
+      state.pendingSuccessScreen = false;
+      state.isAuthenticated = true; // NOW unlock the school dashboard
     },
   },
   extraReducers: (builder) => {
@@ -124,8 +149,11 @@ const authSlice = createSlice({
       state.accessToken = action.payload.data.accessToken;
       state.refreshToken = action.payload.data.refreshToken;
       state.isAuthenticated = true;
-      AsyncStorage.setItem('accessToken', action.payload.data.accessToken);
-      AsyncStorage.setItem('refreshToken', action.payload.data.refreshToken);
+      persistAuth({
+        accessToken: action.payload.data.accessToken,
+        refreshToken: action.payload.data.refreshToken,
+        role: action.payload.data.user?.role || 'teacher',
+      });
     });
     builder.addCase(loginThunk.rejected, (state, action) => {
       state.isLoading = false;
@@ -139,12 +167,32 @@ const authSlice = createSlice({
     });
     builder.addCase(registerThunk.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.user = action.payload.data.user;
-      state.accessToken = action.payload.data.accessToken;
-      state.refreshToken = action.payload.data.refreshToken;
-      state.isAuthenticated = true;
-      AsyncStorage.setItem('accessToken', action.payload.data.accessToken);
-      AsyncStorage.setItem('refreshToken', action.payload.data.refreshToken);
+      const role = action.payload.data.user?.role;
+      const scortenId = action.payload.data.scortenId || null;
+
+      state.user            = action.payload.data.user;
+      state.accessToken     = action.payload.data.accessToken;
+      state.refreshToken    = action.payload.data.refreshToken;
+      state.lastRegisteredSCortenId = scortenId;
+
+      if (role === 'school' && scortenId) {
+        // School: show success screen FIRST, then authenticate
+        state.pendingSuccessScreen = true;
+        state.isAuthenticated = false;
+      } else {
+        // Teacher: go straight to app
+        state.isAuthenticated = true;
+        state.pendingSuccessScreen = false;
+      }
+
+      persistAuth({
+        accessToken:  action.payload.data.accessToken,
+        refreshToken: action.payload.data.refreshToken,
+        role:         role || 'teacher',
+      });
+      if (scortenId) {
+        AsyncStorage.setItem('schoolSCortenId', scortenId);
+      }
     });
     builder.addCase(registerThunk.rejected, (state, action) => {
       state.isLoading = false;
@@ -157,8 +205,11 @@ const authSlice = createSlice({
       state.accessToken = action.payload.data.accessToken;
       state.refreshToken = action.payload.data.refreshToken;
       state.isAuthenticated = true;
-      AsyncStorage.setItem('accessToken', action.payload.data.accessToken);
-      AsyncStorage.setItem('refreshToken', action.payload.data.refreshToken);
+      persistAuth({
+        accessToken: action.payload.data.accessToken,
+        refreshToken: action.payload.data.refreshToken,
+        role: action.payload.data.user?.role || 'teacher',
+      });
     });
 
     // Get Me
@@ -168,5 +219,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setTokens, setUser, logout, clearError } = authSlice.actions;
+export const { setTokens, setUser, logout, clearError, clearSuccessScreen } = authSlice.actions;
 export default authSlice.reducer;

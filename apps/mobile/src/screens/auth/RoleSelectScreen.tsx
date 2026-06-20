@@ -1,64 +1,44 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Animated, Dimensions, Image,
+  Animated, StatusBar, Dimensions,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const { width } = Dimensions.get('window');
-type Props = { navigation: any };
+const { height } = Dimensions.get('window');
 
-// Illustrated role card component matching Figma
-function RoleCard({
-  title, subtitle, description, illustration,
-  selected, onPress, borderColor,
-}: {
-  title: string;
-  subtitle: string;
-  description: string;
-  illustration: string;
-  selected: boolean;
-  onPress: () => void;
-  borderColor: string;
-}) {
-  return (
-    <TouchableOpacity
-      style={[
-        styles.roleCard,
-        selected && { borderColor, borderWidth: 2 },
-      ]}
-      activeOpacity={0.85}
-      onPress={onPress}
-    >
-      {/* Illustration area */}
-      <View style={[styles.illustrationBox, { backgroundColor: COLORS.backgroundAlt }]}>
-        <Text style={styles.illustration}>{illustration}</Text>
-      </View>
+const ROLES = [
+  {
+    key: 'teacher',
+    title: "I'm a Teacher",
+    subtitle: 'Find jobs, build portfolio, grow your career',
+    icon: 'person',
+    accentColor: COLORS.primary,
+    features: ['Browse school jobs', 'AI-powered interviews', 'Resume builder', 'Skill certifications'],
+    bg: COLORS.primaryBg,
+  },
+  {
+    key: 'school',
+    title: 'I Represent a School',
+    subtitle: 'Post jobs, hire verified teachers with AI screening',
+    icon: 'business',
+    accentColor: '#059669',
+    features: ['Post teaching jobs', 'AI candidate screening', 'Manage applications', 'Direct messaging'],
+    bg: '#ECFDF5',
+  },
+];
 
-      {/* Text */}
-      <View style={styles.roleText}>
-        <Text style={styles.roleSubtitle}>{subtitle}</Text>
-        <Text style={styles.roleTitle}>{title}</Text>
-        <Text style={styles.roleDescription}>{description}</Text>
-      </View>
-
-      {/* Selection indicator */}
-      <View style={[
-        styles.radioOuter,
-        selected && { borderColor },
-      ]}>
-        {selected && <View style={[styles.radioInner, { backgroundColor: borderColor }]} />}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-export function RoleSelectScreen({ navigation }: Props) {
-  const [selected, setSelected] = React.useState<'teacher' | 'school' | null>(null);
-  const fade = useRef(new Animated.Value(0)).current;
+export function RoleSelectScreen({ navigation }: any) {
+  const [selected, setSelected] = useState<'teacher' | 'school' | null>(null);
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
   }, []);
 
   const handleContinue = () => {
@@ -67,189 +47,166 @@ export function RoleSelectScreen({ navigation }: Props) {
   };
 
   return (
-    <Animated.View style={[styles.container, { opacity: fade }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <View style={styles.backCircle}>
-            <Text style={styles.backArrow}>‹</Text>
-          </View>
-        </TouchableOpacity>
+    <Animated.View style={[styles.root, { opacity: fadeAnim }]}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
-        <View style={styles.headerText}>
-          <Text style={styles.title}>Choose your role</Text>
-          <Text style={styles.subtitle}>
-            Tell us who you are, so we can guide you better.
-          </Text>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={22} color="#FFF" />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <View style={styles.brand}>
+            <Icon name="school" size={28} color="#FFF" />
+          </View>
+          <Text style={styles.headerTitle}>Join Scorten</Text>
+          <Text style={styles.headerSub}>Choose how you want to use the app</Text>
         </View>
       </View>
 
-      {/* Role Cards */}
-      <View style={styles.cardsArea}>
-        <RoleCard
-          title="I'm a Teacher."
-          subtitle="Teacher"
-          description="I want to work."
-          illustration="👩‍🏫"
-          selected={selected === 'teacher'}
-          onPress={() => setSelected('teacher')}
-          borderColor={COLORS.primary}
-        />
-        <RoleCard
-          title="Join as School."
-          subtitle="School"
-          description="I want to hire."
-          illustration="🏫"
-          selected={selected === 'school'}
-          onPress={() => setSelected('school')}
-          borderColor={COLORS.primary}
-        />
-      </View>
+      {/* ROLE CARDS */}
+      <Animated.View style={[styles.content, { transform: [{ translateY: slideAnim }] }]}>
+        {ROLES.map(role => {
+          const isOn = selected === role.key;
+          return (
+            <TouchableOpacity
+              key={role.key}
+              style={[
+                styles.card,
+                isOn && { borderColor: role.accentColor, borderWidth: 2, backgroundColor: role.bg },
+              ]}
+              onPress={() => setSelected(role.key as any)}
+              activeOpacity={0.88}
+            >
+              {/* Icon + Selection */}
+              <View style={styles.cardTop}>
+                <View style={[styles.iconBox, { backgroundColor: role.accentColor + '20' }]}>
+                  <Icon name={role.icon} size={32} color={role.accentColor} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={[styles.roleTitle, isOn && { color: role.accentColor }]}>{role.title}</Text>
+                  <Text style={styles.roleSub}>{role.subtitle}</Text>
+                </View>
+                {/* Radio */}
+                <View style={[styles.radio, isOn && { borderColor: role.accentColor }]}>
+                  {isOn && <View style={[styles.radioFill, { backgroundColor: role.accentColor }]} />}
+                </View>
+              </View>
 
-      {/* Continue Button */}
-      <View style={styles.footer}>
+              {/* Feature List */}
+              <View style={[styles.featureList, isOn && { opacity: 1 }]}>
+                {role.features.map(ft => (
+                  <View key={ft} style={styles.featureItem}>
+                    <Icon name="checkmark-circle" size={15} color={isOn ? role.accentColor : COLORS.textMuted} />
+                    <Text style={[styles.featureText, isOn && { color: COLORS.text }]}>{ft}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {isOn && (
+                <View style={[styles.selectedBadge, { backgroundColor: role.accentColor }]}>
+                  <Icon name="checkmark" size={12} color="#FFF" />
+                  <Text style={styles.selectedBadgeText}> Selected</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* Continue */}
         <TouchableOpacity
-          style={[styles.continueBtn, !selected && styles.continueBtnDisabled]}
-          activeOpacity={0.85}
+          style={[
+            styles.continueBtn,
+            !selected && styles.continueBtnOff,
+            selected === 'school' && styles.continueBtnSchool,
+          ]}
           onPress={handleContinue}
           disabled={!selected}
+          activeOpacity={0.88}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          <Icon name="arrow-forward" size={20} color="#FFF" />
+          <Text style={styles.continueBtnText}>
+            {selected === 'teacher'
+              ? ' Continue as Teacher'
+              : selected === 'school'
+              ? ' Continue as School'
+              : ' Select a role to continue'}
+          </Text>
         </TouchableOpacity>
-      </View>
+
+        {/* Login link */}
+        <View style={styles.loginRow}>
+          <Text style={styles.loginText}>Already registered? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.loginLink}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  root: { flex: 1, backgroundColor: COLORS.background },
+
   header: {
-    paddingTop: 56,
-    paddingHorizontal: SPACING.screen,
-    paddingBottom: 28,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 16,
-  },
-  backBtn: { marginTop: 4 },
-  backCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  backArrow: { fontSize: 24, color: COLORS.text, lineHeight: 28 },
-  headerText: { flex: 1 },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-  },
-
-  cardsArea: {
-    flex: 1,
-    paddingHorizontal: SPACING.screen,
-    gap: 16,
-  },
-  roleCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS['2xl'],
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  illustrationBox: {
-    width: 100,
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 28,
-  },
-  illustration: { fontSize: 50 },
-  roleText: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 24,
-  },
-  roleSubtitle: {
-    fontSize: 11,
-    color: COLORS.primary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  roleTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  roleDescription: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-  },
-  radioOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 18,
-  },
-  radioInner: {
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-  },
-
-  footer: {
-    paddingHorizontal: SPACING.screen,
-    paddingBottom: 40,
-    paddingTop: 20,
-  },
-  continueBtn: {
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    paddingVertical: 18,
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 28,
   },
-  continueBtnDisabled: {
-    backgroundColor: COLORS.primaryBg,
-    shadowOpacity: 0,
-    elevation: 0,
+  backBtn: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 20,
   },
-  continueBtnText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  headerCenter: { alignItems: 'center' },
+  brand: {
+    width: 68, height: 68, borderRadius: 20, backgroundColor: '#FFFFFF20',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    borderWidth: 2, borderColor: '#FFFFFF40',
   },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: '#FFF', marginBottom: 6 },
+  headerSub: { fontSize: 13, color: '#FFFFFFBB' },
+
+  content: { flex: 1, padding: SPACING.screen },
+
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS['2xl'],
+    padding: 16, marginBottom: 14,
+    borderWidth: 1.5, borderColor: COLORS.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 4,
+    position: 'relative', overflow: 'hidden',
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  iconBox: { width: 58, height: 58, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  roleTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
+  roleSub: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 17 },
+  radio: {
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 2, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  radioFill: { width: 12, height: 12, borderRadius: 6 },
+
+  featureList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, opacity: 0.6 },
+  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 5, width: '47%' },
+  featureText: { fontSize: 12, color: COLORS.textMuted, fontWeight: '500' },
+
+  selectedBadge: {
+    position: 'absolute', top: 12, right: 12,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full,
+  },
+  selectedBadgeText: { fontSize: 11, fontWeight: '800', color: '#FFF' },
+
+  continueBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18, marginTop: 8, marginBottom: 20,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
+  },
+  continueBtnOff: { backgroundColor: COLORS.primaryLight, shadowOpacity: 0.1, elevation: 2 },
+  continueBtnSchool: { backgroundColor: '#059669', shadowColor: '#059669' },
+  continueBtnText: { fontSize: 17, fontWeight: '800', color: '#FFF' },
+
+  loginRow: { flexDirection: 'row', justifyContent: 'center' },
+  loginText: { fontSize: 15, color: COLORS.textSecondary },
+  loginLink: { fontSize: 15, color: COLORS.primary, fontWeight: '800' },
 });

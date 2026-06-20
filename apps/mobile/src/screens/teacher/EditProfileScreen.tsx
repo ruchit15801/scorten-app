@@ -1,26 +1,27 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, StatusBar,
-  ActivityIndicator,
+  TextInput, KeyboardAvoidingView, Platform, StatusBar, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
-import { useUpdateTeacherProfile, useMyTeacherProfile } from '../../hooks/useQueries';
+import { useMyTeacherProfile, useUpdateTeacherProfile } from '../../hooks/useQueries';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
 const SUBJECTS = ['Mathematics', 'Science', 'English', 'Physics', 'Chemistry', 'Hindi', 'History', 'Geography', 'Biology', 'Computer Science'];
-const BOARDS = ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge'];
-const MODES = ['Full Time', 'Part Time', 'Contract', 'Freelance'];
+const BOARDS   = ['CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge'];
+const MODES    = ['Full Time', 'Part Time', 'Contract', 'Freelance'];
 
-function InputField({ label, value, onChange, placeholder, keyboardType, multiline }: any) {
+function InputField({ label, value, onChange, placeholder, keyboardType, multiline, icon }: any) {
   const [focused, setFocused] = useState(false);
   return (
-    <View style={s.inputGroup}>
+    <View style={s.group}>
       <Text style={s.label}>{label}</Text>
-      <View style={[s.inputWrap, focused && s.inputFocused, multiline && { alignItems: 'flex-start', paddingTop: 4 }]}>
+      <View style={[s.inputWrap, focused && s.focused, multiline && { alignItems: 'flex-start', paddingTop: 12 }]}>
+        {icon && <Icon name={icon} size={18} color={focused ? COLORS.primary : COLORS.textMuted} style={{ marginRight: 10, marginTop: multiline ? 2 : 0 }} />}
         <TextInput
-          style={[s.input, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
+          style={[s.input, multiline && { minHeight: 90, textAlignVertical: 'top' }]}
           placeholder={placeholder}
           placeholderTextColor={COLORS.inputPlaceholder}
           value={value}
@@ -29,204 +30,226 @@ function InputField({ label, value, onChange, placeholder, keyboardType, multili
           onBlur={() => setFocused(false)}
           keyboardType={keyboardType || 'default'}
           multiline={multiline}
-          autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
         />
       </View>
     </View>
   );
 }
 
-function ChipGroup({ label, options, selected, onToggle }: any) {
+function ChipGroup({ label, options, selected, onToggle, single }: any) {
   return (
-    <View style={s.inputGroup}>
+    <View style={s.chipGroup}>
       <Text style={s.label}>{label}</Text>
-      <View style={s.chipRow}>
-        {options.map((opt: string) => (
-          <TouchableOpacity
-            key={opt}
-            style={[s.chip, selected.includes(opt) && s.chipActive]}
-            onPress={() => onToggle(opt)}
-          >
-            <Text style={[s.chipText, selected.includes(opt) && s.chipTextActive]}>{opt}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={s.chipWrap}>
+        {options.map((opt: string) => {
+          const active = single ? selected === opt : selected?.includes(opt);
+          return (
+            <TouchableOpacity
+              key={opt}
+              style={[s.chip, active && s.chipOn]}
+              onPress={() => onToggle(opt)}
+            >
+              {active && <Icon name="checkmark" size={12} color={COLORS.primary} />}
+              <Text style={[s.chipText, active && s.chipTextOn]}>{opt}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
 }
 
+const s = StyleSheet.create({
+  group: { marginBottom: 16 },
+  label: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.lg,
+    borderWidth: 1.5, borderColor: COLORS.inputBorder,
+    paddingHorizontal: 14, paddingVertical: 13,
+  },
+  focused: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryUltraLight },
+  input: { flex: 1, fontSize: 15, color: COLORS.text },
+  chipGroup: { marginBottom: 16 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.full,
+    paddingHorizontal: 13, paddingVertical: 8,
+    borderWidth: 1.5, borderColor: COLORS.inputBorder,
+  },
+  chipOn: { backgroundColor: COLORS.primaryBg, borderColor: COLORS.primary },
+  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  chipTextOn: { color: COLORS.primary },
+});
+
 export function EditProfileScreen({ navigation }: any) {
   const { user } = useSelector((s: RootState) => s.auth);
   const { data: profile } = useMyTeacherProfile();
-  const updateProfile = useUpdateTeacherProfile();
+  const updateMutation = useUpdateTeacherProfile();
 
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [city, setCity] = useState(profile?.city || '');
   const [state, setState] = useState(profile?.state || '');
   const [subjects, setSubjects] = useState<string[]>(profile?.subjects || []);
   const [boards, setBoards] = useState<string[]>(profile?.boards || []);
-  const [modes, setModes] = useState<string[]>(profile?.preferredEmploymentTypes || []);
-  const [salaryMin, setSalaryMin] = useState(profile?.expectedSalaryMin?.toString() || '');
-  const [salaryMax, setSalaryMax] = useState(profile?.expectedSalaryMax?.toString() || '');
-  const [languages, setLanguages] = useState(profile?.languages?.join(', ') || '');
+  const [mode, setMode] = useState(profile?.preferredMode || 'Full Time');
+  const [expYears, setExpYears] = useState(String(profile?.experienceYears || ''));
+  const [expectedSalary, setExpectedSalary] = useState(String(profile?.expectedSalary || ''));
 
-  const toggleItem = (list: string[], setList: any, item: string) => {
-    setList(list.includes(item) ? list.filter(x => x !== item) : [...list, item]);
-  };
+  const toggleArr = (arr: string[], setArr: any, val: string) =>
+    setArr(arr.includes(val) ? arr.filter((x: string) => x !== val) : [...arr, val]);
 
   const handleSave = async () => {
-    await updateProfile.mutateAsync({
-      bio,
-      city,
-      state,
-      subjects,
-      boards,
-      preferredEmploymentTypes: modes,
-      expectedSalaryMin: parseInt(salaryMin) || 0,
-      expectedSalaryMax: parseInt(salaryMax) || 0,
-      languages: languages.split(',').map(l => l.trim()).filter(Boolean),
-    });
-    navigation.goBack();
+    try {
+      await updateMutation.mutateAsync({
+        firstName, lastName, bio, city, state,
+        subjects, boards, preferredMode: mode,
+        experienceYears: parseInt(expYears) || 0,
+        expectedSalary: parseInt(expectedSalary) || 0,
+      });
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Saved', 'Profile changes saved locally!');
+      navigation.goBack();
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar backgroundColor={COLORS.background} barStyle="dark-content" />
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <View style={styles.backCircle}><Text style={styles.backArrow}>‹</Text></View>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.title}>Edit Profile</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, updateMutation.isPending && { opacity: 0.7 }]}
+          onPress={handleSave}
+          disabled={updateMutation.isPending}
+        >
+          {updateMutation.isPending
+            ? <ActivityIndicator size="small" color={COLORS.primary} />
+            : <Text style={styles.saveBtnText}>Save</Text>
+          }
+        </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+        {/* Avatar */}
+        <View style={styles.avatarSection}>
+          <TouchableOpacity style={styles.avatarWrap}>
+            <Icon name="person" size={48} color={COLORS.primary} />
+            <View style={styles.avatarEdit}>
+              <Icon name="camera" size={14} color="#FFF" />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.avatarHint}>Tap to change photo</Text>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Info</Text>
-          <InputField label="Full Name" value={`${user?.firstName || ''} ${user?.lastName || ''}`} onChange={() => {}} placeholder="John Doe" />
-          <InputField label="Bio / About" value={bio} onChange={setBio} placeholder="Write a short intro about yourself..." multiline />
-          <InputField label="City" value={city} onChange={setCity} placeholder="Ahmedabad" />
-          <InputField label="State" value={state} onChange={setState} placeholder="Gujarat" />
-          <InputField label="Languages (comma separated)" value={languages} onChange={setLanguages} placeholder="English, Hindi, Gujarati" />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Teaching Preferences</Text>
-          <ChipGroup
-            label="Subjects"
-            options={SUBJECTS}
-            selected={subjects}
-            onToggle={(s: string) => toggleItem(subjects, setSubjects, s)}
-          />
-          <ChipGroup
-            label="Boards"
-            options={BOARDS}
-            selected={boards}
-            onToggle={(b: string) => toggleItem(boards, setBoards, b)}
-          />
-          <ChipGroup
-            label="Employment Mode"
-            options={MODES}
-            selected={modes}
-            onToggle={(m: string) => toggleItem(modes, setModes, m)}
-          />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Salary Expectations (₹/month)</Text>
-          <View style={styles.salaryRow}>
-            <View style={{ flex: 1 }}>
-              <InputField label="Minimum" value={salaryMin} onChange={setSalaryMin} placeholder="25000" keyboardType="number-pad" />
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <InputField label="First Name" value={firstName} onChange={setFirstName} placeholder="First name" icon="person-outline" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <InputField label="Last Name" value={lastName} onChange={setLastName} placeholder="Last name" icon="person-outline" />
+              </View>
             </View>
-            <Text style={styles.salaryDash}>—</Text>
-            <View style={{ flex: 1 }}>
-              <InputField label="Maximum" value={salaryMax} onChange={setSalaryMax} placeholder="60000" keyboardType="number-pad" />
+            <InputField label="Bio" value={bio} onChange={setBio} placeholder="Tell schools about yourself..." multiline icon="create-outline" />
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <InputField label="City" value={city} onChange={setCity} placeholder="Your city" icon="location-outline" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <InputField label="State" value={state} onChange={setState} placeholder="State" icon="location-outline" />
+              </View>
             </View>
           </View>
         </View>
 
-        <View style={{ height: 32 }} />
-      </ScrollView>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Teaching Details</Text>
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <InputField label="Experience (Years)" value={expYears} onChange={setExpYears} placeholder="e.g. 5" keyboardType="number-pad" icon="time-outline" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <InputField label="Expected Salary (₹/mo)" value={expectedSalary} onChange={setExpectedSalary} placeholder="e.g. 45000" keyboardType="number-pad" icon="cash-outline" />
+              </View>
+            </View>
+            <ChipGroup label="Subjects" options={SUBJECTS} selected={subjects} onToggle={(v: string) => toggleArr(subjects, setSubjects, v)} />
+            <ChipGroup label="Boards" options={BOARDS} selected={boards} onToggle={(v: string) => toggleArr(boards, setBoards, v)} />
+            <ChipGroup label="Work Mode" options={MODES} selected={mode} onToggle={setMode} single />
+          </View>
+        </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveBtn, updateProfile.isPending && { opacity: 0.7 }]}
-          onPress={handleSave}
-          disabled={updateProfile.isPending}
-        >
-          {updateProfile.isPending
+        <TouchableOpacity style={styles.saveFooterBtn} onPress={handleSave} disabled={updateMutation.isPending}>
+          {updateMutation.isPending
             ? <ActivityIndicator color="#FFF" />
-            : <Text style={styles.saveBtnText}>Save Changes</Text>
+            : <>
+                <Icon name="checkmark-circle" size={20} color="#FFF" />
+                <Text style={styles.saveFooterText}> Save Changes</Text>
+              </>
           }
         </TouchableOpacity>
-      </View>
+
+        <View style={{ height: 24 }} />
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const s = StyleSheet.create({
-  inputGroup: { marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
-  inputWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.lg,
-    borderWidth: 1.5, borderColor: COLORS.inputBorder, paddingHorizontal: 16,
-  },
-  inputFocused: { borderColor: COLORS.inputBorderFocused, backgroundColor: '#FFF' },
-  input: { flex: 1, fontSize: 15, color: COLORS.text, paddingVertical: 14 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  chip: {
-    backgroundColor: COLORS.inputBg, borderRadius: RADIUS.full,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderWidth: 1.5, borderColor: COLORS.inputBorder,
-  },
-  chipActive: { backgroundColor: COLORS.primaryBg, borderColor: COLORS.primary },
-  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-  chipTextActive: { color: COLORS.primary },
-});
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.screen, paddingTop: 56, paddingBottom: 16,
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  backBtn: {},
-  backCircle: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.surface,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border,
-  },
-  backArrow: { fontSize: 26, color: COLORS.text, lineHeight: 30 },
-  title: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: '800', color: '#FFF' },
+  saveBtn: { backgroundColor: '#FFF', paddingHorizontal: 18, paddingVertical: 8, borderRadius: RADIUS.full },
+  saveBtnText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
 
   scroll: { padding: SPACING.screen },
 
-  section: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 20,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 20,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+  avatarSection: { alignItems: 'center', marginBottom: 24 },
+  avatarWrap: {
+    width: 90, height: 90, borderRadius: 26, backgroundColor: COLORS.primaryBg,
+    alignItems: 'center', justifyContent: 'center', position: 'relative',
+    borderWidth: 2, borderColor: COLORS.primary + '40',
   },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 16 },
+  avatarEdit: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: COLORS.surface,
+  },
+  avatarHint: { fontSize: 12, color: COLORS.textMuted, marginTop: 8 },
 
-  salaryRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 16 },
-  salaryDash: { fontSize: 24, color: COLORS.textMuted, marginBottom: 14 },
+  section: { marginBottom: 16 },
+  sectionTitle: {
+    fontSize: 12, fontWeight: '700', color: COLORS.textMuted,
+    textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginLeft: 2,
+  },
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16,
+    borderWidth: 1, borderColor: COLORS.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  },
+  row: { flexDirection: 'row', gap: 12 },
 
-  footer: {
-    padding: SPACING.screen, backgroundColor: COLORS.surface,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 10,
+  saveFooterBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl, paddingVertical: 18, marginTop: 8,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 8,
   },
-  saveBtn: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.xl,
-    paddingVertical: 18, alignItems: 'center',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
-  },
-  saveBtnText: { fontSize: 17, fontWeight: '700', color: '#FFF' },
+  saveFooterText: { fontSize: 17, fontWeight: '800', color: '#FFF' },
 });

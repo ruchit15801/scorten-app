@@ -2,125 +2,140 @@ import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
 export function CandidateProfileScreen({ navigation, route }: any) {
-  const candidate = route.params?.candidate || {
+  const c = route.params?.candidate || {
     name: 'Priya Sharma', role: 'Senior Mathematics Teacher',
     exp: '5 yrs', city: 'New Delhi', board: 'CBSE', score: 94,
-    education: 'M.Sc Mathematics, B.Ed – Gujarat University',
-    subjects: ['Mathematics', 'Statistics'],
-    languages: ['English', 'Hindi', 'Gujarati'],
+    education: 'M.Sc Mathematics, B.Ed – DU', subjects: ['Mathematics', 'Statistics'], languages: ['English', 'Hindi'],
   };
 
-  const scoreColor = candidate.score >= 85 ? COLORS.success : candidate.score >= 70 ? '#F59E0B' : COLORS.error;
-  const scoreLabel = candidate.score >= 85 ? 'Excellent' : candidate.score >= 70 ? 'Good' : 'Average';
+  const scoreColor = c.score >= 85 ? COLORS.success : c.score >= 70 ? COLORS.warning : COLORS.error;
+  const scoreLabel = c.score >= 85 ? 'Excellent' : c.score >= 70 ? 'Good' : 'Average';
 
-  const handleShortlist = () => Alert.alert('✅ Shortlisted', `${candidate.name} has been shortlisted.`);
-  const handleScheduleInterview = () => Alert.alert('🎙️ Interview Scheduled', `AI interview link sent to ${candidate.name}.`);
-  const handleReject = () =>
-    Alert.alert('Reject Candidate', `Are you sure you want to reject ${candidate.name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Reject', style: 'destructive', onPress: () => navigation.goBack() },
-    ]);
+  const BARS = [
+    { label: 'Subject Knowledge', val: 96 },
+    { label: 'Communication', val: 88 },
+    { label: 'Experience Match', val: 82 },
+    { label: 'Cultural Fit', val: 91 },
+  ];
 
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.background} barStyle="dark-content" />
+    <View style={styles.root}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Text style={styles.backArrow}>‹</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Candidate Profile</Text>
-        <TouchableOpacity style={styles.iconBtn}>
-          <Text style={{ fontSize: 20 }}>📤</Text>
-        </TouchableOpacity>
+      {/* ── HERO HEADER ── */}
+      <View style={styles.heroHeader}>
+        <View style={styles.heroHeaderNav}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+            <Icon name="chevron-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.heroHeaderTitle}>Candidate Profile</Text>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Icon name="share-outline" size={20} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.heroRow}>
+          <View style={styles.avatar}>
+            <Icon name="person" size={44} color={COLORS.primary} />
+          </View>
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroName}>{c.name}</Text>
+            <Text style={styles.heroRole}>{c.role}</Text>
+            <View style={styles.heroMeta}>
+              <Icon name="location-outline" size={13} color="#FFFFFFAA" />
+              <Text style={styles.heroMetaText}> {c.city || c.location}</Text>
+              <Text style={styles.heroDot}> · </Text>
+              <Icon name="time-outline" size={13} color="#FFFFFFAA" />
+              <Text style={styles.heroMetaText}> {c.exp}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Action row */}
+        <View style={styles.heroActions}>
+          <TouchableOpacity style={styles.heroMsgBtn} onPress={() => navigation.navigate('Messages')}>
+            <Icon name="chatbubbles-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.heroMsgText}> Message</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.heroResumeBtn}>
+            <Icon name="document-text-outline" size={16} color="#FFF" />
+            <Text style={styles.heroResumeText}> View Resume</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Hero */}
-        <View style={styles.heroCard}>
-          <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <Text style={{ fontSize: 44 }}>👩‍🏫</Text>
-            </View>
-          </View>
-          <Text style={styles.name}>{candidate.name}</Text>
-          <Text style={styles.role}>{candidate.role}</Text>
-          <Text style={styles.meta}>📍 {candidate.city || candidate.location} · {candidate.exp}</Text>
-
-          {/* Action buttons */}
-          <View style={styles.heroActions}>
-            <TouchableOpacity style={styles.msgBtn} onPress={() => navigation.navigate('Messages')}>
-              <Text style={styles.msgBtnText}>💬 Message</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.resumeBtn}>
-              <Text style={styles.resumeBtnText}>📄 Resume</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* AI Score */}
+        {/* AI SCORE */}
         <View style={[styles.scoreCard, { borderColor: scoreColor + '30', backgroundColor: scoreColor + '08' }]}>
-          <View style={[styles.scoreCircle, { borderColor: scoreColor }]}>
-            <Text style={[styles.scoreNum, { color: scoreColor }]}>{candidate.score}</Text>
-            <Text style={[styles.scoreOutOf, { color: scoreColor }]}>/100</Text>
-          </View>
-          <View style={styles.scoreInfo}>
-            <Text style={[styles.scoreTitle, { color: scoreColor }]}>🤖 AI Assessment Score</Text>
-            <Text style={styles.scoreGrade}>{scoreLabel} Match for this Role</Text>
-            <View style={styles.scoreBars}>
-              {[
-                { label: 'Subject Knowledge', val: 96 },
-                { label: 'Communication', val: 88 },
-                { label: 'Experience', val: 82 },
-              ].map(bar => (
-                <View key={bar.label} style={styles.scoreBarRow}>
-                  <Text style={styles.scoreBarLabel}>{bar.label}</Text>
-                  <View style={styles.scoreBarBg}>
-                    <View style={[styles.scoreBarFill, { width: `${bar.val}%`, backgroundColor: scoreColor }]} />
-                  </View>
-                  <Text style={[styles.scoreBarVal, { color: scoreColor }]}>{bar.val}</Text>
-                </View>
-              ))}
+          <View style={styles.scoreLeft}>
+            <View style={[styles.scoreCircle, { borderColor: scoreColor }]}>
+              <Text style={[styles.scoreNum, { color: scoreColor }]}>{c.score}</Text>
+              <Text style={[styles.scoreOutOf, { color: scoreColor }]}>/100</Text>
             </View>
+            <Text style={[styles.scoreGrade, { color: scoreColor }]}>{scoreLabel}</Text>
+          </View>
+          <View style={styles.scoreRight}>
+            <Text style={[styles.scoreSectionTitle, { color: scoreColor }]}>🤖 AI Assessment Score</Text>
+            {BARS.map(bar => (
+              <View key={bar.label} style={styles.barRow}>
+                <Text style={styles.barLabel}>{bar.label}</Text>
+                <View style={styles.barTrack}>
+                  <View style={[styles.barFill, { width: `${bar.val}%` as any, backgroundColor: scoreColor }]} />
+                </View>
+                <Text style={[styles.barVal, { color: scoreColor }]}>{bar.val}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
-        {/* Details */}
+        {/* DETAILS */}
         <View style={styles.detailCard}>
           <Text style={styles.cardTitle}>Teaching Details</Text>
           {[
-            { icon: '📚', label: 'Subjects', value: (candidate.subjects || ['Mathematics']).join(', ') },
-            { icon: '🏛️', label: 'Board', value: candidate.board || 'CBSE' },
-            { icon: '🎓', label: 'Education', value: candidate.education || 'B.Ed, M.Sc Mathematics' },
-            { icon: '⏳', label: 'Experience', value: candidate.exp || '5 Years' },
-            { icon: '🗣️', label: 'Languages', value: (candidate.languages || ['English', 'Hindi']).join(', ') },
+            { icon: 'book-outline', label: 'Subjects', value: (c.subjects || ['Mathematics']).join(', ') },
+            { icon: 'school-outline', label: 'Board', value: c.board || 'CBSE' },
+            { icon: 'ribbon', label: 'Education', value: c.education || 'B.Ed, M.Sc Mathematics' },
+            { icon: 'time-outline', label: 'Experience', value: c.exp || '5 Years' },
+            { icon: 'chatbubbles-outline', label: 'Languages', value: (c.languages || ['English', 'Hindi']).join(', ') },
           ].map(item => (
             <View key={item.label} style={styles.detailRow}>
-              <Text style={{ fontSize: 16, marginRight: 10 }}>{item.icon}</Text>
+              <Icon name={item.icon} size={16} color={COLORS.textMuted} />
               <Text style={styles.detailLabel}>{item.label}</Text>
               <Text style={styles.detailValue}>{item.value}</Text>
             </View>
           ))}
         </View>
 
-        {/* AI Insights */}
+        {/* AI INSIGHTS */}
         <View style={styles.insightCard}>
           <Text style={styles.cardTitle}>🤖 AI Insights</Text>
-          <View style={styles.insightBox}>
-            <Text style={styles.insightTitle}>✅ Strengths</Text>
+          <View style={styles.insightBlock}>
+            <View style={styles.insightHeaderRow}>
+              <Icon name="checkmark-circle" size={16} color={COLORS.success} />
+              <Text style={styles.insightTitle}> Strengths</Text>
+            </View>
             {['Deep subject knowledge in Mathematics', 'Excellent communication skills', '5+ years in CBSE curriculum'].map((s, i) => (
-              <Text key={i} style={styles.insightItem}>• {s}</Text>
+              <View key={i} style={styles.insightItem}>
+                <View style={styles.insightBullet} />
+                <Text style={styles.insightText}>{s}</Text>
+              </View>
             ))}
           </View>
-          <View style={[styles.insightBox, { backgroundColor: COLORS.warningBg || '#FFFBEB', borderColor: COLORS.warning + '30' }]}>
-            <Text style={[styles.insightTitle, { color: COLORS.warning }]}>⚠️ Consider Asking About</Text>
-            {['Online teaching experience', 'JEE/Competitive exam prep'].map((s, i) => (
-              <Text key={i} style={[styles.insightItem, { color: '#92400E' }]}>• {s}</Text>
+          <View style={[styles.insightBlock, { backgroundColor: '#FFFBEB', borderColor: COLORS.warning + '30' }]}>
+            <View style={styles.insightHeaderRow}>
+              <Icon name="information-circle" size={16} color={COLORS.warning} />
+              <Text style={[styles.insightTitle, { color: '#92400E' }]}> Ask About</Text>
+            </View>
+            {['Online teaching experience', 'JEE/Competitive exam preparation'].map((s, i) => (
+              <View key={i} style={styles.insightItem}>
+                <View style={[styles.insightBullet, { backgroundColor: COLORS.warning }]} />
+                <Text style={[styles.insightText, { color: '#92400E' }]}>{s}</Text>
+              </View>
             ))}
           </View>
         </View>
@@ -128,16 +143,22 @@ export function CandidateProfileScreen({ navigation, route }: any) {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Action Footer */}
+      {/* ACTION FOOTER */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.rejectBtn} onPress={handleReject}>
-          <Text style={styles.rejectBtnText}>✗ Reject</Text>
+        <TouchableOpacity
+          style={styles.rejectBtn}
+          onPress={() => Alert.alert('Reject', `Reject ${c.name}?`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Reject', style: 'destructive', onPress: () => navigation.goBack() }])}
+        >
+          <Icon name="close" size={18} color={COLORS.error} />
+          <Text style={styles.rejectText}> Reject</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.interviewBtn} onPress={handleScheduleInterview}>
-          <Text style={styles.interviewBtnText}>🎙️ AI Interview</Text>
+        <TouchableOpacity style={styles.interviewBtn} onPress={() => Alert.alert('✅', `AI interview link sent to ${c.name}`)}>
+          <Icon name="mic-outline" size={18} color={COLORS.primary} />
+          <Text style={styles.interviewText}> AI Interview</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.shortlistBtn} onPress={handleShortlist}>
-          <Text style={styles.shortlistBtnText}>✓ Shortlist</Text>
+        <TouchableOpacity style={styles.shortlistBtn} onPress={() => Alert.alert('✅ Shortlisted', `${c.name} has been shortlisted!`)}>
+          <Icon name="checkmark" size={18} color="#FFF" />
+          <Text style={styles.shortlistText}> Shortlist</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -145,115 +166,115 @@ export function CandidateProfileScreen({ navigation, route }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
 
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.screen, paddingTop: 52, paddingBottom: 14,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  heroHeader: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 0,
+  },
+  heroHeaderNav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20,
   },
   iconBtn: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.backgroundAlt,
+    width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25',
     alignItems: 'center', justifyContent: 'center',
   },
-  backArrow: { fontSize: 28, color: COLORS.text, lineHeight: 32 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  heroHeaderTitle: { fontSize: 17, fontWeight: '700', color: '#FFF' },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 },
+  avatar: {
+    width: 80, height: 80, borderRadius: 24, backgroundColor: '#FFFFFF25',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF60',
+  },
+  heroInfo: { flex: 1 },
+  heroName: { fontSize: 20, fontWeight: '800', color: '#FFF', marginBottom: 3 },
+  heroRole: { fontSize: 13, color: '#FFFFFFBB', fontWeight: '600', marginBottom: 6 },
+  heroMeta: { flexDirection: 'row', alignItems: 'center' },
+  heroMetaText: { fontSize: 12, color: '#FFFFFFAA' },
+  heroDot: { color: '#FFFFFFAA' },
+  heroActions: { flexDirection: 'row', gap: 10, paddingBottom: 16, borderTopWidth: 1, borderTopColor: '#FFFFFF20', paddingTop: 14 },
+  heroMsgBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#FFF', borderRadius: RADIUS.xl, paddingVertical: 12,
+  },
+  heroMsgText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  heroResumeBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#FFFFFF25', borderRadius: RADIUS.xl, paddingVertical: 12,
+    borderWidth: 1, borderColor: '#FFFFFF40',
+  },
+  heroResumeText: { fontSize: 14, fontWeight: '700', color: '#FFF' },
 
   scroll: { padding: SPACING.screen },
 
-  heroCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 24,
-    alignItems: 'center', marginBottom: 16,
-    borderWidth: 1, borderColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 12, elevation: 4,
-  },
-  avatarWrap: { marginBottom: 14 },
-  avatar: {
-    width: 88, height: 88, borderRadius: 44, backgroundColor: COLORS.primaryBg,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: COLORS.primary + '30',
-  },
-  name: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  role: { fontSize: 14, color: COLORS.primary, fontWeight: '700', marginBottom: 4 },
-  meta: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 20 },
-  heroActions: { flexDirection: 'row', gap: 12, width: '100%' },
-  msgBtn: {
-    flex: 1, backgroundColor: COLORS.primary, borderRadius: RADIUS.xl,
-    paddingVertical: 13, alignItems: 'center',
-  },
-  msgBtnText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
-  resumeBtn: {
-    flex: 1, backgroundColor: COLORS.backgroundAlt, borderRadius: RADIUS.xl,
-    paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
-  },
-  resumeBtnText: { color: COLORS.text, fontWeight: '700', fontSize: 15 },
-
   scoreCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 16, borderRadius: RADIUS.xl,
-    padding: 16, marginBottom: 16, borderWidth: 1.5,
+    flexDirection: 'row', gap: 14, borderRadius: RADIUS.xl, padding: 14,
+    marginBottom: 12, borderWidth: 1.5,
   },
+  scoreLeft: { alignItems: 'center', width: 70 },
   scoreCircle: {
-    width: 72, height: 72, borderRadius: 36, borderWidth: 3,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3,
+    width: 64, height: 64, borderRadius: 32, borderWidth: 3,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 6,
   },
-  scoreNum: { fontSize: 22, fontWeight: '900' },
-  scoreOutOf: { fontSize: 11, fontWeight: '600' },
-  scoreInfo: { flex: 1 },
-  scoreTitle: { fontSize: 13, fontWeight: '800', marginBottom: 2 },
-  scoreGrade: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 10 },
-  scoreBars: { gap: 6 },
-  scoreBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  scoreBarLabel: { fontSize: 11, color: COLORS.textMuted, width: 100 },
-  scoreBarBg: { flex: 1, height: 4, backgroundColor: COLORS.backgroundAlt, borderRadius: 2 },
-  scoreBarFill: { height: 4, borderRadius: 2 },
-  scoreBarVal: { fontSize: 11, fontWeight: '700', width: 24, textAlign: 'right' },
+  scoreNum: { fontSize: 20, fontWeight: '900' },
+  scoreOutOf: { fontSize: 10, fontWeight: '600' },
+  scoreGrade: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  scoreRight: { flex: 1 },
+  scoreSectionTitle: { fontSize: 13, fontWeight: '800', marginBottom: 10 },
+  barRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  barLabel: { fontSize: 10, color: COLORS.textMuted, width: 90 },
+  barTrack: { flex: 1, height: 4, backgroundColor: COLORS.backgroundAlt, borderRadius: 2 },
+  barFill: { height: 4, borderRadius: 2 },
+  barVal: { fontSize: 11, fontWeight: '800', width: 22, textAlign: 'right' },
 
   detailCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 18,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 16,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.border,
   },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 16 },
+  cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text, marginBottom: 14 },
   detailRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 10, gap: 10,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  detailLabel: { width: 90, fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
-  detailValue: { flex: 1, fontSize: 13, color: COLORS.text, fontWeight: '600' },
+  detailLabel: { width: 90, fontSize: 13, color: COLORS.textSecondary },
+  detailValue: { flex: 1, fontSize: 13, fontWeight: '600', color: COLORS.text },
 
   insightCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 18,
-    borderWidth: 1, borderColor: COLORS.border, marginBottom: 16, gap: 12,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.border, gap: 12,
   },
-  insightBox: {
+  insightBlock: {
     backgroundColor: COLORS.successBg, borderRadius: RADIUS.lg, padding: 12,
     borderWidth: 1, borderColor: COLORS.success + '30',
   },
-  insightTitle: { fontSize: 13, fontWeight: '800', color: COLORS.successDark, marginBottom: 8 },
-  insightItem: { fontSize: 13, color: COLORS.successDark, lineHeight: 20 },
+  insightHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  insightTitle: { fontSize: 13, fontWeight: '800', color: COLORS.successDark },
+  insightItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  insightBullet: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: COLORS.success },
+  insightText: { fontSize: 13, color: COLORS.successDark, flex: 1, lineHeight: 18 },
 
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: COLORS.surface, paddingHorizontal: SPACING.screen,
-    paddingVertical: 14, flexDirection: 'row', gap: 10,
+    backgroundColor: COLORS.surface, paddingHorizontal: SPACING.screen, paddingVertical: 12,
+    flexDirection: 'row', gap: 10,
     borderTopWidth: 1, borderTopColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 12,
   },
   rejectBtn: {
-    paddingHorizontal: 16, paddingVertical: 14, borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.errorBg, borderWidth: 1, borderColor: COLORS.error + '30',
-    alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 14, paddingVertical: 14, borderRadius: RADIUS.xl,
+    backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: COLORS.error + '30',
   },
-  rejectBtnText: { color: COLORS.error, fontWeight: '700', fontSize: 14 },
+  rejectText: { fontSize: 14, fontWeight: '700', color: COLORS.error },
   interviewBtn: {
-    flex: 1, backgroundColor: COLORS.primaryBg, borderRadius: RADIUS.xl,
-    paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: COLORS.primary + '30',
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.primaryBg, borderRadius: RADIUS.xl, paddingVertical: 14,
+    borderWidth: 1, borderColor: COLORS.primary + '30',
   },
-  interviewBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: 14 },
+  interviewText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
   shortlistBtn: {
-    flex: 1, backgroundColor: COLORS.success, borderRadius: RADIUS.xl,
-    paddingVertical: 14, alignItems: 'center',
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.success, borderRadius: RADIUS.xl, paddingVertical: 14,
     shadowColor: COLORS.success, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
   },
-  shortlistBtnText: { color: '#FFF', fontWeight: '800', fontSize: 15 },
+  shortlistText: { fontSize: 14, fontWeight: '800', color: '#FFF' },
 });

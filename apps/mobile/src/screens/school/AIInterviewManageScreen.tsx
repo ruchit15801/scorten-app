@@ -1,243 +1,204 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert,
 } from 'react-native';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const MOCK_AI_SESSIONS = [
-  {
-    id: '1', name: 'Priya Sharma', role: 'Mathematics Teacher', score: 94,
-    status: 'completed', duration: '18 min', date: 'Today, 10:30 AM',
-    strengths: ['Strong subject knowledge', 'Excellent communication'],
-    flags: [],
-  },
-  {
-    id: '2', name: 'Rahul Desai', role: 'Physics Teacher', score: 78,
-    status: 'in_progress', duration: '—', date: 'In Progress',
-    strengths: [], flags: [],
-  },
-  {
-    id: '3', name: 'Anjali Patel', role: 'English Teacher', score: 65,
-    status: 'completed', duration: '22 min', date: 'Yesterday, 3:00 PM',
-    strengths: ['Creative teaching approach'],
-    flags: ['Hesitation on classroom management Q'],
-  },
-  {
-    id: '4', name: 'Neha Gupta', role: 'Chemistry Teacher', score: 91,
-    status: 'scheduled', duration: '—', date: 'Tomorrow, 11:00 AM',
-    strengths: [], flags: [],
-  },
+const SESSIONS = [
+  { id: '1', name: 'Priya Sharma', subject: 'Mathematics', score: 88, status: 'completed', date: '2 hrs ago', answers: 8 },
+  { id: '2', name: 'Rahul Desai', subject: 'Physics', score: null, status: 'pending', date: 'Invited 1d ago', answers: 0 },
+  { id: '3', name: 'Anjali Patel', subject: 'English', score: 75, status: 'completed', date: 'Yesterday', answers: 8 },
 ];
 
-const STATUS_CONFIG: any = {
-  completed: { label: 'Completed', color: COLORS.success, bg: COLORS.successBg, icon: '✅' },
-  in_progress: { label: 'In Progress', color: '#F59E0B', bg: '#FFFBEB', icon: '⏳' },
-  scheduled: { label: 'Scheduled', color: '#6366F1', bg: '#EEF2FF', icon: '📅' },
-};
+export function AIInterviewManageScreen({ navigation, route }: any) {
+  const jobId = route.params?.jobId || '1';
+  const [tab, setTab] = useState<'all' | 'pending' | 'done'>('all');
 
-function SessionCard({ session, onPress }: any) {
-  const cfg = STATUS_CONFIG[session.status] || STATUS_CONFIG.completed;
-  const scoreColor = session.score >= 85 ? COLORS.success : session.score >= 70 ? '#F59E0B' : COLORS.error;
-
-  return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.cardTop}>
-        <View style={styles.avatar}>
-          <Text style={{ fontSize: 24 }}>👩‍🏫</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{session.name}</Text>
-          <Text style={styles.role}>{session.role}</Text>
-          <Text style={styles.date}>{cfg.icon} {session.date}</Text>
-        </View>
-        {session.status === 'completed' && (
-          <View style={[styles.scoreCircle, { borderColor: scoreColor }]}>
-            <Text style={[styles.scoreText, { color: scoreColor }]}>{session.score}</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.divider} />
-
-      <View style={styles.cardFooter}>
-        <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-          <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
-        </View>
-        {session.duration !== '—' && (
-          <Text style={styles.duration}>⏱️ {session.duration}</Text>
-        )}
-        {session.status === 'completed' && (
-          <TouchableOpacity style={styles.viewBtn} onPress={onPress}>
-            <Text style={styles.viewBtnText}>View Report →</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {session.strengths.length > 0 && (
-        <View style={styles.strengthsBox}>
-          <Text style={styles.strengthsLabel}>AI Strengths:</Text>
-          {session.strengths.map((s: string, i: number) => (
-            <Text key={i} style={styles.strengthItem}>• {s}</Text>
-          ))}
-        </View>
-      )}
-
-      {session.flags.length > 0 && (
-        <View style={styles.flagsBox}>
-          <Text style={styles.flagsLabel}>⚠️ Flags:</Text>
-          {session.flags.map((f: string, i: number) => (
-            <Text key={i} style={styles.flagItem}>• {f}</Text>
-          ))}
-        </View>
-      )}
-    </TouchableOpacity>
-  );
-}
-
-export function AIInterviewManageScreen({ navigation }: any) {
-  const [activeTab, setActiveTab] = useState('All');
-  const tabs = ['All', 'Completed', 'In Progress', 'Scheduled'];
-
-  const filtered = MOCK_AI_SESSIONS.filter(s => {
-    if (activeTab === 'All') return true;
-    if (activeTab === 'Completed') return s.status === 'completed';
-    if (activeTab === 'In Progress') return s.status === 'in_progress';
-    if (activeTab === 'Scheduled') return s.status === 'scheduled';
+  const filtered = SESSIONS.filter(s => {
+    if (tab === 'pending') return s.status === 'pending';
+    if (tab === 'done') return s.status === 'completed';
     return true;
   });
 
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.primaryBg} barStyle="dark-content" />
+    <View style={styles.root}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backArrow}>‹</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.title}>AI Interviews</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>AI Interview Manager</Text>
+          <Text style={styles.headerSub}>Automate your screening process</Text>
+        </View>
+        <TouchableOpacity style={styles.addBtn} onPress={() => Alert.alert('Invite', 'Select candidates to invite for AI interview')}>
+          <Icon name="add" size={22} color={COLORS.primary} />
+        </TouchableOpacity>
       </View>
 
       {/* Stats */}
       <View style={styles.statsRow}>
         {[
-          { label: 'Total', value: '4', color: COLORS.primary },
-          { label: 'Done', value: '2', color: COLORS.success },
-          { label: 'Pending', value: '2', color: '#F59E0B' },
+          { label: 'Total Invited', value: 3, color: COLORS.primary },
+          { label: 'Completed', value: 2, color: COLORS.success },
+          { label: 'Pending', value: 1, color: COLORS.warning },
           { label: 'Avg Score', value: '82', color: '#8B5CF6' },
-        ].map(stat => (
-          <View key={stat.label} style={styles.statCard}>
-            <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
+        ].map((s, i) => (
+          <View key={s.label} style={styles.statItem}>
+            <Text style={[styles.statVal, { color: s.color }]}>{s.value}</Text>
+            <Text style={styles.statLbl}>{s.label}</Text>
           </View>
         ))}
       </View>
 
       {/* Tabs */}
-      <FlatList
-        horizontal
-        data={tabs}
-        keyExtractor={t => t}
-        contentContainerStyle={styles.tabList}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
+      <View style={styles.tabRow}>
+        {(['all', 'pending', 'done'] as const).map(t => (
           <TouchableOpacity
-            style={[styles.tab, activeTab === item && styles.tabActive]}
-            onPress={() => setActiveTab(item)}
+            key={t}
+            style={[styles.tab, tab === t && styles.tabActive]}
+            onPress={() => setTab(t)}
           >
-            <Text style={[styles.tabText, activeTab === item && styles.tabTextActive]}>{item}</Text>
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+              {t === 'all' ? 'All' : t === 'pending' ? 'Pending' : 'Completed'}
+            </Text>
           </TouchableOpacity>
-        )}
-      />
+        ))}
+      </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={s => s.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <SessionCard
-            session={item}
-            onPress={() => {}}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>🤖</Text>
-            <Text style={styles.emptyTitle}>No AI interviews yet</Text>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {filtered.map(s => (
+          <View key={s.id} style={styles.card}>
+            <View style={styles.cardRow}>
+              <View style={styles.cardAvatar}>
+                <Icon name="person" size={22} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardName}>{s.name}</Text>
+                <View style={styles.cardMeta}>
+                  <Icon name="book-outline" size={12} color={COLORS.textMuted} />
+                  <Text style={styles.cardMetaText}> {s.subject} · {s.date}</Text>
+                </View>
+              </View>
+              {s.score !== null ? (
+                <View style={[styles.scorePill, { backgroundColor: (s.score >= 80 ? COLORS.success : COLORS.warning) + '18' }]}>
+                  <Text style={[styles.scoreText, { color: s.score >= 80 ? COLORS.success : COLORS.warning }]}>{s.score}/100</Text>
+                </View>
+              ) : (
+                <View style={[styles.scorePill, { backgroundColor: COLORS.warningBg }]}>
+                  <Text style={[styles.scoreText, { color: COLORS.warning }]}>Pending</Text>
+                </View>
+              )}
+            </View>
+
+            {s.status === 'completed' ? (
+              <View style={styles.completedStrip}>
+                <Icon name="checkmark-circle" size={14} color={COLORS.success} />
+                <Text style={styles.completedText}> {s.answers} questions answered · AI analyzed</Text>
+                <TouchableOpacity style={styles.viewReportBtn}>
+                  <Text style={styles.viewReportText}>Report →</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.pendingStrip}>
+                <Icon name="time-outline" size={14} color={COLORS.warning} />
+                <Text style={styles.pendingText}> Waiting for candidate</Text>
+                <TouchableOpacity
+                  style={styles.remindBtn}
+                  onPress={() => Alert.alert('✅', `Reminder sent to ${s.name}`)}
+                >
+                  <Text style={styles.remindText}>Remind</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        }
-      />
+        ))}
+
+        {/* AI Feature Banner */}
+        <View style={styles.aiBanner}>
+          <Icon name="sparkles" size={24} color={COLORS.primary} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.aiBannerTitle}>AI Does the Heavy Lifting</Text>
+            <Text style={styles.aiBannerSub}>Candidates answer 8 recorded questions. AI scores communication, confidence, and subject knowledge.</Text>
+          </View>
+        </View>
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.screen, paddingTop: 56, paddingBottom: 16,
-    backgroundColor: COLORS.primaryBg,
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  backArrow: { fontSize: 32, color: COLORS.text, width: 40 },
-  title: { fontSize: 18, fontWeight: '800', color: COLORS.text },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFF' },
+  headerSub: { fontSize: 12, color: '#FFFFFFBB', marginTop: 2 },
+  addBtn: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFF',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   statsRow: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: SPACING.screen, paddingBottom: 16,
-    backgroundColor: COLORS.primaryBg,
+    flexDirection: 'row', backgroundColor: COLORS.primary, paddingHorizontal: SPACING.screen,
+    paddingBottom: 16, borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+    borderTopWidth: 1, borderTopColor: '#FFFFFF20',
   },
-  statCard: {
-    flex: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    padding: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
-  },
-  statValue: { fontSize: 20, fontWeight: '800', marginBottom: 2 },
-  statLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
+  statItem: { flex: 1, alignItems: 'center' },
+  statVal: { fontSize: 20, fontWeight: '900', marginBottom: 2 },
+  statLbl: { fontSize: 10, color: '#FFFFFFAA', fontWeight: '600' },
 
-  tabList: { paddingHorizontal: SPACING.screen, paddingVertical: 12, gap: 8 },
-  tab: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+  tabRow: {
+    flexDirection: 'row', backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.screen, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  tabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
-  tabTextActive: { color: '#FFF' },
+  tab: { paddingVertical: 14, marginRight: 20, borderBottomWidth: 2.5, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: COLORS.primary },
+  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.textMuted },
+  tabTextActive: { color: COLORS.primary, fontWeight: '800' },
 
-  list: { padding: SPACING.screen, paddingTop: 0 },
+  scroll: { padding: SPACING.screen },
+
   card: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 14,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 14, marginBottom: 12,
     borderWidth: 1, borderColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  avatar: {
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: COLORS.backgroundAlt, alignItems: 'center', justifyContent: 'center',
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  cardAvatar: { width: 48, height: 48, borderRadius: 14, backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  cardName: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
+  cardMeta: { flexDirection: 'row', alignItems: 'center' },
+  cardMetaText: { fontSize: 12, color: COLORS.textMuted },
+  scorePill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: RADIUS.full },
+  scoreText: { fontSize: 13, fontWeight: '800' },
+
+  completedStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: COLORS.successBg, borderRadius: RADIUS.md, padding: 10,
   },
-  name: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
-  role: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 2 },
-  date: { fontSize: 12, color: COLORS.textMuted },
-  scoreCircle: {
-    width: 52, height: 52, borderRadius: 26,
-    borderWidth: 2.5, alignItems: 'center', justifyContent: 'center',
+  completedText: { flex: 1, fontSize: 12, color: COLORS.successDark, fontWeight: '600' },
+  viewReportBtn: {},
+  viewReportText: { fontSize: 12, color: COLORS.primary, fontWeight: '700' },
+
+  pendingStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: COLORS.warningBg, borderRadius: RADIUS.md, padding: 10,
   },
-  scoreText: { fontSize: 18, fontWeight: '800' },
+  pendingText: { flex: 1, fontSize: 12, color: '#92400E', fontWeight: '600' },
+  remindBtn: { backgroundColor: COLORS.warning, paddingHorizontal: 12, paddingVertical: 4, borderRadius: RADIUS.full },
+  remindText: { fontSize: 11, color: '#FFF', fontWeight: '700' },
 
-  divider: { height: 1, backgroundColor: COLORS.border, marginBottom: 12 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full },
-  statusText: { fontSize: 12, fontWeight: '700' },
-  duration: { fontSize: 12, color: COLORS.textMuted },
-  viewBtn: { flex: 1, alignItems: 'flex-end' },
-  viewBtnText: { fontSize: 13, color: COLORS.primary, fontWeight: '700' },
-
-  strengthsBox: { marginTop: 12, backgroundColor: COLORS.successBg, borderRadius: RADIUS.md, padding: 10 },
-  strengthsLabel: { fontSize: 12, fontWeight: '700', color: COLORS.successDark, marginBottom: 4 },
-  strengthItem: { fontSize: 12, color: COLORS.successDark, lineHeight: 20 },
-
-  flagsBox: { marginTop: 8, backgroundColor: COLORS.errorBg, borderRadius: RADIUS.md, padding: 10 },
-  flagsLabel: { fontSize: 12, fontWeight: '700', color: COLORS.error, marginBottom: 4 },
-  flagItem: { fontSize: 12, color: COLORS.error, lineHeight: 20 },
-
-  empty: { alignItems: 'center', paddingTop: 60 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: COLORS.textSecondary },
+  aiBanner: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    backgroundColor: COLORS.primaryBg, borderRadius: RADIUS.xl, padding: 16,
+    borderWidth: 1, borderColor: COLORS.primary + '30', marginTop: 4,
+  },
+  aiBannerTitle: { fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 6 },
+  aiBannerSub: { fontSize: 12, color: COLORS.textSecondary, lineHeight: 18 },
 });

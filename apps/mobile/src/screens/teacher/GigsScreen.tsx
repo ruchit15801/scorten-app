@@ -1,89 +1,124 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  StatusBar, TextInput,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, Alert,
 } from 'react-native';
+import { useMyGigs } from '../../hooks/useQueries';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const GIGS = [
-  { id: '1', title: 'Online Math Tutor (Grade 8-10)', rate: '₹500/hr', posted: '2 days ago', status: 'active', bookings: 5 },
-  { id: '2', title: 'CBSE Science Coaching', rate: '₹600/hr', posted: '1 week ago', status: 'active', bookings: 2 },
-  { id: '3', title: 'JEE Mathematics Prep', rate: '₹800/hr', posted: '2 weeks ago', status: 'paused', bookings: 8 },
+const MOCK_GIGS = [
+  { _id: '1', title: 'Online Math Tutor for Class 10–12', subject: 'Mathematics', rate: 500, mode: 'Online', status: 'active', orders: 8, rating: 4.9 },
+  { _id: '2', title: 'English Grammar & Writing Coach', subject: 'English', rate: 400, mode: 'Online', status: 'active', orders: 5, rating: 4.7 },
+  { _id: '3', title: 'JEE/NEET Science Tutoring', subject: 'Physics', rate: 700, mode: 'Both', status: 'paused', orders: 12, rating: 4.8 },
 ];
 
-function GigCard({ gig, onEdit }: any) {
+const STATUS_CFG: any = {
+  active: { color: COLORS.success, label: 'Active', bg: COLORS.successBg },
+  paused: { color: COLORS.warning, label: 'Paused', bg: COLORS.warningBg },
+  draft:  { color: COLORS.textMuted, label: 'Draft', bg: COLORS.backgroundAlt },
+};
+
+function GigCard({ gig, onPress, onToggle }: any) {
+  const s = STATUS_CFG[gig.status] || STATUS_CFG.draft;
   return (
-    <View style={styles.gigCard}>
-      <View style={styles.gigTop}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.gigTitle}>{gig.title}</Text>
-          <Text style={styles.gigRate}>{gig.rate}</Text>
-          <Text style={styles.gigPosted}>Posted {gig.posted}</Text>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.cardTop}>
+        <View style={styles.subjectIcon}>
+          <Icon name="book-outline" size={22} color={COLORS.primary} />
         </View>
-        <View style={[styles.statusBadge, gig.status === 'paused' && { backgroundColor: COLORS.backgroundAlt }]}>
-          <Text style={[styles.statusText, gig.status === 'paused' && { color: COLORS.textMuted }]}>
-            {gig.status === 'active' ? '🟢 Active' : '⏸️ Paused'}
-          </Text>
+        <View style={styles.cardInfo}>
+          <Text style={styles.gigTitle} numberOfLines={2}>{gig.title}</Text>
+          <Text style={styles.gigSubject}>{gig.subject} · {gig.mode}</Text>
+        </View>
+        <View style={[styles.statusPill, { backgroundColor: s.bg }]}>
+          <Text style={[styles.statusText, { color: s.color }]}>{s.label}</Text>
         </View>
       </View>
-
-      <View style={styles.gigDivider} />
-
-      <View style={styles.gigFooter}>
-        <Text style={styles.bookingsText}>
-          <Text style={{ color: COLORS.primary, fontWeight: '800' }}>{gig.bookings}</Text> Bookings
-        </Text>
-        <TouchableOpacity style={styles.editBtn} onPress={onEdit}>
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.pauseBtn}>
-          <Text style={styles.pauseBtnText}>{gig.status === 'active' ? 'Pause' : 'Activate'}</Text>
+      <View style={styles.cardFoot}>
+        <View style={styles.rateBox}>
+          <Icon name="cash-outline" size={13} color={COLORS.primary} />
+          <Text style={styles.rateText}> ₹{gig.rate}/hr</Text>
+        </View>
+        <View style={styles.ordersBox}>
+          <Icon name="checkmark-circle" size={13} color={COLORS.success} />
+          <Text style={styles.ordersText}> {gig.orders} orders</Text>
+        </View>
+        <View style={styles.ratingBox}>
+          <Icon name="star" size={13} color="#F59E0B" />
+          <Text style={styles.ratingText}> {gig.rating}</Text>
+        </View>
+        <TouchableOpacity style={styles.pauseBtn} onPress={() => onToggle(gig)}>
+          <Icon name={gig.status === 'active' ? 'pause' : 'play'} size={14} color={COLORS.textMuted} />
         </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 export function GigsScreen({ navigation }: any) {
-  return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.primaryBg} barStyle="dark-content" />
+  const { data: apiGigs } = useMyGigs();
+  const [gigs, setGigs] = useState(MOCK_GIGS);
 
+  const toggle = (gig: any) => {
+    setGigs(prev => prev.map(g => g._id === gig._id ? { ...g, status: g.status === 'active' ? 'paused' : 'active' } : g));
+  };
+
+  const activeGigs = gigs.filter(g => g.status === 'active');
+  const totalOrders = gigs.reduce((s, g) => s + g.orders, 0);
+  const avgRating = (gigs.reduce((s, g) => s + g.rating, 0) / gigs.length).toFixed(1);
+
+  return (
+    <View style={styles.root}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>My Gigs</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>My Gigs</Text>
+          <Text style={styles.headerSub}>Freelance teaching opportunities</Text>
+        </View>
         <TouchableOpacity style={styles.createBtn} onPress={() => navigation.navigate('CreateGig')}>
-          <Text style={styles.createBtnText}>+ New Gig</Text>
+          <Icon name="add" size={18} color={COLORS.primary} />
+          <Text style={styles.createBtnText}> New</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
+      {/* Stats strip */}
+      <View style={styles.statsStrip}>
         {[
-          { label: 'Active Gigs', value: '2', color: COLORS.success },
-          { label: 'Total Bookings', value: '15', color: COLORS.primary },
-          { label: 'This Month', value: '₹24K', color: '#8B5CF6' },
-        ].map(stat => (
-          <View key={stat.label} style={styles.statCard}>
-            <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-            <Text style={styles.statLabel}>{stat.label}</Text>
+          { label: 'Active Gigs', val: activeGigs.length, color: COLORS.success },
+          { label: 'Total Orders', val: totalOrders, color: COLORS.primary },
+          { label: 'Avg Rating', val: avgRating, color: '#F59E0B' },
+        ].map((s, i) => (
+          <View key={s.label} style={[styles.statItem, i > 0 && styles.statBorder]}>
+            <Text style={[styles.statVal, { color: s.color }]}>{s.val}</Text>
+            <Text style={styles.statLbl}>{s.label}</Text>
           </View>
         ))}
       </View>
 
       <FlatList
-        data={GIGS}
-        keyExtractor={g => g.id}
+        data={gigs}
+        keyExtractor={g => g._id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => <GigCard gig={item} onEdit={() => {}} />}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>📌</Text>
-            <Text style={styles.emptyTitle}>No gigs yet</Text>
-            <Text style={styles.emptySub}>Create your first tutoring gig to start earning</Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('CreateGig')}>
-              <Text style={styles.emptyBtnText}>Create First Gig</Text>
-            </TouchableOpacity>
-          </View>
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <GigCard
+            gig={item}
+            onPress={() => Alert.alert(item.title, `₹${item.rate}/hr · ${item.orders} orders completed`)}
+            onToggle={toggle}
+          />
+        )}
+        ListFooterComponent={
+          <TouchableOpacity style={styles.newGigBanner} onPress={() => navigation.navigate('CreateGig')}>
+            <Icon name="add-circle" size={28} color={COLORS.primary} />
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={styles.newGigTitle}>Create a New Gig</Text>
+              <Text style={styles.newGigSub}>Offer your expertise to students & schools</Text>
+            </View>
+            <Icon name="chevron-forward" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
         }
       />
     </View>
@@ -91,51 +126,54 @@ export function GigsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.screen, paddingTop: 56, paddingBottom: 16,
-    backgroundColor: COLORS.primaryBg,
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 0,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  title: { fontSize: 26, fontWeight: '800', color: COLORS.text },
-  createBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.full },
-  createBtnText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '900', color: '#FFF' },
+  headerSub: { fontSize: 12, color: '#FFFFFFBB', marginTop: 2 },
+  createBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.full },
+  createBtnText: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
 
-  statsRow: {
-    flexDirection: 'row', gap: 10,
-    paddingHorizontal: SPACING.screen, paddingBottom: 20,
-    backgroundColor: COLORS.primaryBg,
+  statsStrip: {
+    flexDirection: 'row', backgroundColor: COLORS.primary,
+    paddingVertical: 14, paddingHorizontal: SPACING.screen,
+    borderTopWidth: 1, borderTopColor: '#FFFFFF20',
   },
-  statCard: {
-    flex: 1, backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    padding: 12, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border,
-  },
-  statValue: { fontSize: 18, fontWeight: '800', marginBottom: 2 },
-  statLabel: { fontSize: 11, color: COLORS.textMuted, fontWeight: '600', textAlign: 'center' },
+  statItem: { flex: 1, alignItems: 'center' },
+  statBorder: { borderLeftWidth: 1, borderLeftColor: '#FFFFFF30' },
+  statVal: { fontSize: 20, fontWeight: '900', marginBottom: 2 },
+  statLbl: { fontSize: 10, color: '#FFFFFFAA', fontWeight: '600' },
 
   list: { padding: SPACING.screen },
-  gigCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 14,
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 14, marginBottom: 12,
     borderWidth: 1, borderColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  gigTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
-  gigTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
-  gigRate: { fontSize: 15, fontWeight: '700', color: COLORS.primary, marginBottom: 2 },
-  gigPosted: { fontSize: 12, color: COLORS.textMuted },
-  statusBadge: { backgroundColor: COLORS.successBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full },
-  statusText: { fontSize: 12, fontWeight: '700', color: COLORS.successDark },
-  gigDivider: { height: 1, backgroundColor: COLORS.border, marginBottom: 12 },
-  gigFooter: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bookingsText: { flex: 1, fontSize: 14, color: COLORS.textSecondary, fontWeight: '500' },
-  editBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.primary },
-  editBtnText: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },
-  pauseBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: RADIUS.md, backgroundColor: COLORS.backgroundAlt },
-  pauseBtnText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
+  subjectIcon: { width: 46, height: 46, borderRadius: 13, backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  cardInfo: { flex: 1 },
+  gigTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 3, lineHeight: 19 },
+  gigSubject: { fontSize: 12, color: COLORS.primary, fontWeight: '600' },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full, alignSelf: 'flex-start' },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  cardFoot: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, gap: 10 },
+  rateBox: { flexDirection: 'row', alignItems: 'center' },
+  rateText: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
+  ordersBox: { flexDirection: 'row', alignItems: 'center' },
+  ordersText: { fontSize: 12, color: COLORS.success, fontWeight: '600' },
+  ratingBox: { flexDirection: 'row', alignItems: 'center' },
+  ratingText: { fontSize: 12, fontWeight: '700', color: '#92400E' },
+  pauseBtn: { marginLeft: 'auto' as any, width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.backgroundAlt, alignItems: 'center', justifyContent: 'center' },
 
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
-  emptySub: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 24, textAlign: 'center', paddingHorizontal: 32 },
-  emptyBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: RADIUS.xl },
-  emptyBtnText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  newGigBanner: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16,
+    borderWidth: 1.5, borderColor: COLORS.primary + '30', borderStyle: 'dashed',
+  },
+  newGigTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 3 },
+  newGigSub: { fontSize: 12, color: COLORS.textSecondary },
 });

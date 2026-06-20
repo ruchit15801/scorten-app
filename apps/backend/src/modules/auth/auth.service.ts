@@ -19,6 +19,23 @@ import { OtpVerifyDto } from './dto/otp-verify.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { OtpService } from './otp.service';
 
+// ─── Scorten ID Generator ──────────────────────────────────────────────────────
+const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusable chars
+function randomChars(len: number): string {
+  let result = '';
+  for (let i = 0; i < len; i++) {
+    result += CHARSET[Math.floor(Math.random() * CHARSET.length)];
+  }
+  return result;
+}
+function makeSchoolSCortenId(): string {
+  const year = new Date().getFullYear();
+  const timePart = Date.now().toString(36).toUpperCase().slice(-3);
+  const randPart = randomChars(2);
+  return `SCH-${year}-${timePart}${randPart}`;
+}
+
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -36,22 +53,42 @@ export class AuthService {
   async register(registerDto: RegisterDto) {
     const { email, phone, password, role, firstName, lastName } = registerDto;
 
-    // Check existing user
+    // ── 1. Check for duplicate email / phone ────────────────────────────────
     const existingUser = await this.userModel.findOne({
-      $or: [{ email }, { phone }],
+      $or: [
+        { email },
+        ...(phone ? [{ phone }] : []),
+      ],
     });
-
     if (existingUser) {
-      throw new ConflictException('User with this email or phone already exists');
+      throw new ConflictException('An account with this email or phone already exists');
     }
 
-    // Hash password
+    // ── 2. For school: validate affiliation number uniqueness ───────────────
+    if (role === UserRole.SCHOOL) {
+      if (!registerDto.affiliationNumber || registerDto.affiliationNumber.trim().length < 5) {
+        throw new BadRequestException('A valid affiliation/registration number is required for school registration');
+      }
+      if (!registerDto.schoolName || registerDto.schoolName.trim().length < 3) {
+        throw new BadRequestException('School name is required');
+      }
+      const dupAff = await this.schoolModel.findOne({
+        affiliationNumber: registerDto.affiliationNumber.trim().toUpperCase(),
+      });
+      if (dupAff) {
+        throw new ConflictException(
+          'A school with this affiliation number is already registered. If this is your school, please sign in.',
+        );
+      }
+    }
+
+    // ── 3. Hash password ────────────────────────────────────────────────────
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
+    // ── 4. Create User record ───────────────────────────────────────────────
     const user = await this.userModel.create({
-      firstName,
-      lastName,
+      firstName: role === UserRole.SCHOOL ? (registerDto.principalName || registerDto.schoolName || 'School') : firstName,
+      lastName:  role === UserRole.SCHOOL ? 'Admin' : (lastName || ''),
       email,
       phone,
       password: hashedPassword,
@@ -59,20 +96,32 @@ export class AuthService {
       authProvider: AuthProvider.LOCAL,
     });
 
-    // Create role-specific profile
+    // ── 5. Create role-specific profile ────────────────────────────────────
+    let schoolProfile: any = null;
+
     if (role === UserRole.TEACHER) {
       await this.teacherModel.create({ userId: user._id });
+
     } else if (role === UserRole.SCHOOL) {
-      await this.schoolModel.create({
-        userId: user._id,
-        schoolName: registerDto['schoolName'] || `${firstName}'s School`,
-        address: '',
-        city: '',
-        state: '',
+      // Generate a server-side guaranteed-unique Scorten ID
+      const scortenId = await this.generateUniqueSCortenId(
+        registerDto.scortenId, // use client suggestion if provided
+      );
+
+      schoolProfile = await this.schoolModel.create({
+        userId:            user._id,
+        scortenId,
+        schoolName:        registerDto.schoolName!.trim(),
+        affiliationNumber: registerDto.affiliationNumber!.trim().toUpperCase(),
+        board:             registerDto.board || 'CBSE',
+        principalName:     registerDto.principalName?.trim() || '',
+        city:              registerDto.city?.trim() || '',
+        state:             registerDto.state?.trim() || '',
+        address:           registerDto.city?.trim() || '',
       });
     }
 
-    // Send verification OTP
+    // ── 6. Send verification OTP ────────────────────────────────────────────
     if (phone) {
       await this.otpService.sendOtp(phone, 'verification');
     }
@@ -81,9 +130,12 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Registration successful. Please verify your phone number.',
+      message: role === UserRole.SCHOOL
+        ? `School registered! Your Scorten ID is ${schoolProfile?.scortenId}.`
+        : 'Registration successful. Please verify your phone number.',
       data: {
         user: this.sanitizeUser(user),
+        ...(schoolProfile ? { scortenId: schoolProfile.scortenId, schoolProfile } : {}),
         ...tokens,
       },
     };
@@ -371,8 +423,36 @@ export class AuthService {
   }
 
   private sanitizeUser(user: UserDocument) {
-    const { password, refreshToken, ...sanitized } = user.toObject();
+    const obj = user.toObject();
+    const { password, refreshToken, ...sanitized } = obj;
     return sanitized;
+  }
+
+  /**
+   * Generate a Scorten School ID that is guaranteed unique in the DB.
+   * Tries the client-provided ID first; on collision generates a fresh one.
+   * Retries up to 5 times.
+   */
+  private async generateUniqueSCortenId(suggested?: string): Promise<string> {
+    const MAX_ATTEMPTS = 5;
+
+    // Validate and try the suggested ID first
+    if (suggested && /^SCH-\d{4}-[A-Z0-9]{5}$/.test(suggested.toUpperCase())) {
+      const exists = await this.schoolModel.findOne({ scortenId: suggested.toUpperCase() });
+      if (!exists) return suggested.toUpperCase();
+    }
+
+    // Generate fresh IDs until unique
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      const id = makeSchoolSCortenId();
+      const exists = await this.schoolModel.findOne({ scortenId: id });
+      if (!exists) return id;
+      // tiny wait to shift the timestamp-based suffix
+      await new Promise(r => setTimeout(r, 5));
+    }
+
+    // Extremely unlikely but safe fallback
+    throw new ConflictException('Could not generate a unique Scorten ID. Please try again.');
   }
 
   private async verifyGoogleToken(token: string): Promise<any> {

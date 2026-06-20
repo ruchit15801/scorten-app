@@ -26,8 +26,18 @@ export class School {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
   userId: Types.ObjectId;
 
+  // ─── Scorten School ID ────────────────────────────────────────────────────────
+  // Auto-generated unique ID: SCH-YYYY-XXXXX (e.g. SCH-2026-A3F7K)
+  // Used for easy identification, searching, and sharing
+  @Prop({ unique: true, sparse: true, trim: true, uppercase: true })
+  scortenId: string;
+
   @Prop({ required: true, trim: true })
   schoolName: string;
+
+  // Official government affiliation / UDISE / registration number
+  @Prop({ trim: true })
+  affiliationNumber: string;
 
   @Prop()
   registrationNumber: string;
@@ -134,6 +144,8 @@ export class School {
 export const SchoolSchema = SchemaFactory.createForClass(School);
 
 SchoolSchema.index({ userId: 1 });
+SchoolSchema.index({ scortenId: 1 });
+SchoolSchema.index({ affiliationNumber: 1 });
 SchoolSchema.index({ city: 1, state: 1 });
 SchoolSchema.index({ verificationStatus: 1 });
 SchoolSchema.index({ location: '2dsphere' });

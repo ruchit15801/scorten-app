@@ -2,131 +2,133 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar,
 } from 'react-native';
+import { useJobApplications } from '../../hooks/useQueries';
+import { Icon } from '../../components/Icon';
 import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
-const MOCK_APPLICATIONS = [
-  {
-    id: '1', name: 'Priya Sharma', role: 'Mathematics Teacher', score: 94,
-    status: 'shortlisted', appliedDate: '2 days ago', city: 'Delhi',
-    exp: '5 yrs', board: 'CBSE', aiInterview: 'completed',
-  },
-  {
-    id: '2', name: 'Rahul Desai', role: 'Physics Teacher', score: 88,
-    status: 'applied', appliedDate: '3 days ago', city: 'Mumbai',
-    exp: '8 yrs', board: 'ICSE', aiInterview: 'pending',
-  },
-  {
-    id: '3', name: 'Anjali Patel', role: 'English Teacher', score: 76,
-    status: 'interview_scheduled', appliedDate: '5 days ago', city: 'Ahmedabad',
-    exp: '3 yrs', board: 'CBSE', aiInterview: 'scheduled',
-  },
-  {
-    id: '4', name: 'Neha Gupta', role: 'Chemistry Teacher', score: 91,
-    status: 'offered', appliedDate: '1 week ago', city: 'Jaipur',
-    exp: '6 yrs', board: 'State', aiInterview: 'completed',
-  },
+const MOCK_APPS = [
+  { _id: '1', status: 'applied', teacherId: { firstName: 'Priya', lastName: 'Sharma', subjects: ['Mathematics'] }, scortenReputationScore: 94, city: 'Delhi', exp: '5 yrs', createdAt: new Date().toISOString() },
+  { _id: '2', status: 'interview_scheduled', teacherId: { firstName: 'Rahul', lastName: 'Desai', subjects: ['Physics'] }, scortenReputationScore: 88, city: 'Mumbai', exp: '8 yrs', createdAt: new Date().toISOString() },
+  { _id: '3', status: 'screening', teacherId: { firstName: 'Anjali', lastName: 'Patel', subjects: ['English'] }, scortenReputationScore: 76, city: 'Ahmedabad', exp: '3 yrs', createdAt: new Date().toISOString() },
+  { _id: '4', status: 'offered', teacherId: { firstName: 'Sonal', lastName: 'Joshi', subjects: ['Science'] }, scortenReputationScore: 91, city: 'Surat', exp: '6 yrs', createdAt: new Date().toISOString() },
 ];
 
-const STATUS_CONFIG: any = {
-  applied: { label: 'Applied', color: '#6366F1', bg: '#EEF2FF' },
-  shortlisted: { label: 'Shortlisted', color: '#F59E0B', bg: '#FFFBEB' },
-  interview_scheduled: { label: 'Interview', color: '#10B981', bg: '#ECFDF5' },
-  offered: { label: 'Offered', color: COLORS.success, bg: COLORS.successBg },
-  rejected: { label: 'Rejected', color: COLORS.error, bg: COLORS.errorBg },
+const STATUS_CFG: any = {
+  applied:             { label: 'Applied',       color: COLORS.primary,   icon: 'document-text-outline' },
+  screening:           { label: 'AI Screening',  color: '#8B5CF6',         icon: 'sparkles' },
+  interview_scheduled: { label: 'Interviewing',  color: COLORS.warning,   icon: 'mic-outline' },
+  offered:             { label: 'Offer Sent',    color: COLORS.success,   icon: 'ribbon' },
+  rejected:            { label: 'Rejected',      color: COLORS.error,     icon: 'close-circle' },
 };
 
-const AI_CONFIG: any = {
-  completed: { label: 'AI Done ✓', color: COLORS.success },
-  pending: { label: 'AI Pending', color: COLORS.warning },
-  scheduled: { label: 'AI Scheduled', color: COLORS.info },
-};
+const TABS = ['All', 'Applied', 'Screening', 'Interview', 'Offered'];
 
-const FILTER_TABS = ['All', 'New', 'Shortlisted', 'Interview', 'Offered'];
+function AppCard({ app, onPress }: any) {
+  const t = app.teacherId || {};
+  const name = `${t.firstName || 'Candidate'} ${t.lastName || ''}`;
+  const subj = t.subjects?.[0] || 'Teacher';
+  const cfg = STATUS_CFG[app.status] || STATUS_CFG.applied;
+  const score = app.scortenReputationScore || 80;
+  const scoreColor = score >= 88 ? COLORS.success : score >= 72 ? COLORS.warning : COLORS.error;
 
-export function JobApplicationsScreen({ navigation }: any) {
-  const [activeFilter, setActiveFilter] = useState('All');
+  return (
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      <View style={styles.cardRow}>
+        <View style={styles.avatar}>
+          <Icon name="person" size={22} color={COLORS.primary} />
+        </View>
+        <View style={styles.info}>
+          <Text style={styles.name}>{name}</Text>
+          <Text style={styles.subj}>{subj}</Text>
+          <View style={styles.metaRow}>
+            <Icon name="location-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.metaText}> {app.city || 'India'}  ·  {app.exp || '3 yrs'}</Text>
+          </View>
+        </View>
+        <View style={[styles.scoreBadge, { backgroundColor: scoreColor + '14', borderColor: scoreColor + '30' }]}>
+          <Text style={[styles.scoreNum, { color: scoreColor }]}>{score}</Text>
+          <Text style={[styles.scoreLbl, { color: scoreColor }]}>AI</Text>
+        </View>
+      </View>
+      <View style={styles.cardFoot}>
+        <View style={[styles.statusChip, { backgroundColor: cfg.color + '14' }]}>
+          <Icon name={cfg.icon} size={12} color={cfg.color} />
+          <Text style={[styles.statusText, { color: cfg.color }]}> {cfg.label}</Text>
+        </View>
+        <Text style={styles.dateText}>
+          {new Date(app.createdAt || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+        </Text>
+        <TouchableOpacity style={styles.viewBtn} onPress={onPress}>
+          <Text style={styles.viewBtnText}>Review →</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
-  const filtered = MOCK_APPLICATIONS.filter(a => {
-    if (activeFilter === 'All') return true;
-    if (activeFilter === 'New') return a.status === 'applied';
-    if (activeFilter === 'Shortlisted') return a.status === 'shortlisted';
-    if (activeFilter === 'Interview') return a.status === 'interview_scheduled';
-    if (activeFilter === 'Offered') return a.status === 'offered';
+export function JobApplicationsScreen({ route, navigation }: any) {
+  const { jobId, jobTitle } = route.params || { jobId: '1', jobTitle: 'Mathematics Teacher' };
+  const [tab, setTab] = useState('All');
+  const { data: apiApps } = useJobApplications(jobId);
+
+  const all = apiApps?.length ? apiApps : MOCK_APPS;
+  const filtered = all.filter((a: any) => {
+    if (tab === 'All') return true;
+    if (tab === 'Applied') return a.status === 'applied';
+    if (tab === 'Screening') return a.status === 'screening';
+    if (tab === 'Interview') return a.status?.includes('interview');
+    if (tab === 'Offered') return a.status === 'offered';
     return true;
   });
 
   return (
-    <View style={styles.container}>
-      <StatusBar backgroundColor={COLORS.primaryBg} barStyle="dark-content" />
+    <View style={styles.root}>
+      <StatusBar backgroundColor={COLORS.primary} barStyle="light-content" />
 
+      {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>‹</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Icon name="chevron-back" size={24} color="#FFF" />
         </TouchableOpacity>
-        <View>
-          <Text style={styles.title}>Applicants</Text>
-          <Text style={styles.subtitle}>{MOCK_APPLICATIONS.length} total applications</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>{jobTitle || 'Applications'}</Text>
+          <Text style={styles.headerSub}>{all.length} candidates · {filtered.length} shown</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity style={styles.aiBtn} onPress={() => navigation.navigate('AIInterviewManage', { jobId })}>
+          <Icon name="sparkles" size={16} color={COLORS.primary} />
+          <Text style={styles.aiBtnText}> AI Screen</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* TABS */}
+      <View style={styles.tabRow}>
+        {TABS.map(t => (
+          <TouchableOpacity
+            key={t}
+            style={[styles.tab, tab === t && styles.tabActive]}
+            onPress={() => setTab(t)}
+          >
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       <FlatList
-        horizontal
-        data={FILTER_TABS}
-        keyExtractor={t => t}
-        contentContainerStyle={styles.filterList}
-        showsHorizontalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.filterTab, activeFilter === item && styles.filterTabActive]}
-            onPress={() => setActiveFilter(item)}
-          >
-            <Text style={[styles.filterText, activeFilter === item && styles.filterTextActive]}>{item}</Text>
-          </TouchableOpacity>
-        )}
-      />
-
-      <FlatList
         data={filtered}
-        keyExtractor={a => a.id}
+        keyExtractor={(a: any) => a._id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => {
-          const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.applied;
-          const ai = AI_CONFIG[item.aiInterview] || AI_CONFIG.pending;
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate('Candidates', { screen: 'CandidateProfile', params: { candidate: item } })}
-            >
-              <View style={styles.cardTop}>
-                <View style={styles.avatar}>
-                  <Text style={{ fontSize: 24 }}>👩‍🏫</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.name}>{item.name}</Text>
-                  <Text style={styles.role}>{item.role}</Text>
-                  <Text style={styles.meta}>{item.city} • {item.exp} • {item.board}</Text>
-                </View>
-                <View style={[styles.scoreBadge, { backgroundColor: '#F0FDF4' }]}>
-                  <Text style={styles.scoreText}>{item.score}</Text>
-                </View>
-              </View>
-
-              <View style={styles.cardFooter}>
-                <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-                  <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
-                </View>
-                <Text style={[styles.aiText, { color: ai.color }]}>{ai.label}</Text>
-                <Text style={styles.dateText}>{item.appliedDate}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }: any) => (
+          <AppCard
+            app={item}
+            onPress={() => navigation.navigate('Candidates', { screen: 'CandidateProfile', params: { candidate: { name: `${item.teacherId?.firstName} ${item.teacherId?.lastName}`, role: item.teacherId?.subjects?.[0], score: item.scortenReputationScore, city: item.city, exp: item.exp } } })}
+          />
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>📭</Text>
-            <Text style={styles.emptyTitle}>No applications</Text>
+            <Icon name="people-outline" size={52} color={COLORS.border} />
+            <Text style={styles.emptyTitle}>No applications yet</Text>
+            <Text style={styles.emptySub}>Candidates will appear here</Text>
           </View>
         }
       />
@@ -135,49 +137,53 @@ export function JobApplicationsScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING.screen, paddingTop: 56, paddingBottom: 16,
-    backgroundColor: COLORS.primaryBg,
+    backgroundColor: COLORS.primary, paddingTop: 52, paddingHorizontal: SPACING.screen, paddingBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  backBtn: { width: 40 },
-  backArrow: { fontSize: 32, color: COLORS.text },
-  title: { fontSize: 20, fontWeight: '800', color: COLORS.text },
-  subtitle: { fontSize: 13, color: COLORS.textSecondary },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#FFFFFF25', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFF' },
+  headerSub: { fontSize: 12, color: '#FFFFFFBB', marginTop: 2 },
+  aiBtn: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#FFF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.full,
+  },
+  aiBtnText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
 
-  filterList: { paddingHorizontal: SPACING.screen, paddingVertical: 12, gap: 8 },
-  filterTab: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+  tabRow: {
+    flexDirection: 'row', backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.screen, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  filterTabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary },
-  filterTextActive: { color: '#FFF' },
+  tab: { paddingVertical: 14, marginRight: 18, borderBottomWidth: 2.5, borderBottomColor: 'transparent' },
+  tabActive: { borderBottomColor: COLORS.primary },
+  tabText: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  tabTextActive: { color: COLORS.primary, fontWeight: '800' },
 
   list: { padding: SPACING.screen },
   card: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 16, marginBottom: 14,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.xl, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: COLORS.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  avatar: {
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: COLORS.backgroundAlt, alignItems: 'center', justifyContent: 'center',
-  },
-  name: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
-  role: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 2 },
-  meta: { fontSize: 12, color: COLORS.textMuted },
-  scoreBadge: { alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.lg },
-  scoreText: { fontSize: 18, fontWeight: '800', color: COLORS.successDark },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  avatar: { width: 50, height: 50, borderRadius: 15, backgroundColor: COLORS.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  info: { flex: 1 },
+  name: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
+  subj: { fontSize: 12, color: COLORS.primary, fontWeight: '600', marginBottom: 3 },
+  metaRow: { flexDirection: 'row', alignItems: 'center' },
+  metaText: { fontSize: 11, color: COLORS.textMuted },
+  scoreBadge: { width: 48, height: 48, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  scoreNum: { fontSize: 16, fontWeight: '900' },
+  scoreLbl: { fontSize: 9, fontWeight: '700', textTransform: 'uppercase' },
+  cardFoot: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, gap: 8 },
+  statusChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  dateText: { fontSize: 11, color: COLORS.textMuted, flex: 1 },
+  viewBtn: {},
+  viewBtnText: { fontSize: 13, color: COLORS.primary, fontWeight: '700' },
 
-  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.full },
-  statusText: { fontSize: 12, fontWeight: '700' },
-  aiText: { fontSize: 12, fontWeight: '600' },
-  dateText: { flex: 1, textAlign: 'right', fontSize: 12, color: COLORS.textMuted },
-
-  empty: { alignItems: 'center', paddingTop: 80 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  emptySub: { fontSize: 14, color: COLORS.textSecondary },
 });
