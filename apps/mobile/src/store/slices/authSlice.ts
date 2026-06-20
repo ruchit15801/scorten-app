@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { MMKV } from 'react-native-mmkv';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../../services/api/auth.api';
-
-const storage = new MMKV({ id: 'scorten-auth' });
 
 interface User {
   _id: string;
@@ -29,9 +27,9 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  accessToken: storage.getString('accessToken') || null,
-  refreshToken: storage.getString('refreshToken') || null,
-  isAuthenticated: !!storage.getString('accessToken'),
+  accessToken: null,
+  refreshToken: null,
+  isAuthenticated: false,
   isLoading: false,
   error: null,
 };
@@ -96,8 +94,8 @@ const authSlice = createSlice({
       state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
       state.isAuthenticated = true;
-      storage.set('accessToken', action.payload.accessToken);
-      storage.set('refreshToken', action.payload.refreshToken);
+      AsyncStorage.setItem('accessToken', action.payload.accessToken);
+      AsyncStorage.setItem('refreshToken', action.payload.refreshToken);
     },
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
@@ -107,8 +105,8 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
-      storage.delete('accessToken');
-      storage.delete('refreshToken');
+      AsyncStorage.removeItem('accessToken');
+      AsyncStorage.removeItem('refreshToken');
     },
     clearError: (state) => {
       state.error = null;
@@ -126,8 +124,8 @@ const authSlice = createSlice({
       state.accessToken = action.payload.data.accessToken;
       state.refreshToken = action.payload.data.refreshToken;
       state.isAuthenticated = true;
-      storage.set('accessToken', action.payload.data.accessToken);
-      storage.set('refreshToken', action.payload.data.refreshToken);
+      AsyncStorage.setItem('accessToken', action.payload.data.accessToken);
+      AsyncStorage.setItem('refreshToken', action.payload.data.refreshToken);
     });
     builder.addCase(loginThunk.rejected, (state, action) => {
       state.isLoading = false;
@@ -135,13 +133,22 @@ const authSlice = createSlice({
     });
 
     // Register
+    builder.addCase(registerThunk.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
     builder.addCase(registerThunk.fulfilled, (state, action) => {
+      state.isLoading = false;
       state.user = action.payload.data.user;
       state.accessToken = action.payload.data.accessToken;
       state.refreshToken = action.payload.data.refreshToken;
       state.isAuthenticated = true;
-      storage.set('accessToken', action.payload.data.accessToken);
-      storage.set('refreshToken', action.payload.data.refreshToken);
+      AsyncStorage.setItem('accessToken', action.payload.data.accessToken);
+      AsyncStorage.setItem('refreshToken', action.payload.data.refreshToken);
+    });
+    builder.addCase(registerThunk.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload as string;
     });
 
     // Verify OTP
@@ -150,8 +157,8 @@ const authSlice = createSlice({
       state.accessToken = action.payload.data.accessToken;
       state.refreshToken = action.payload.data.refreshToken;
       state.isAuthenticated = true;
-      storage.set('accessToken', action.payload.data.accessToken);
-      storage.set('refreshToken', action.payload.data.refreshToken);
+      AsyncStorage.setItem('accessToken', action.payload.data.accessToken);
+      AsyncStorage.setItem('refreshToken', action.payload.data.refreshToken);
     });
 
     // Get Me

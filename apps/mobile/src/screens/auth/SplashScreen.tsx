@@ -3,7 +3,6 @@ import {
   View, Text, StyleSheet, Animated, Easing,
   Dimensions, StatusBar,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import { COLORS } from '../../constants/colors';
 
 const { width, height } = Dimensions.get('window');

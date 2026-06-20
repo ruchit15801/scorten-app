@@ -11,6 +11,41 @@ import { COLORS, SPACING, RADIUS } from '../../constants/colors';
 
 type Props = { navigation: any; route: any };
 
+function InputField({
+  label, value, onChange, placeholder, secure, showToggle, keyboardType,
+}: any) {
+  const [isFocused, setIsFocused] = useState(false);
+  
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={[
+        styles.inputWrapper,
+        isFocused && styles.inputWrapperFocused,
+      ]}>
+        <TextInput
+          style={styles.input}
+          placeholder={placeholder}
+          placeholderTextColor={COLORS.inputPlaceholder}
+          value={value}
+          onChangeText={onChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          secureTextEntry={secure && !showToggle?.show}
+          keyboardType={keyboardType || 'default'}
+          autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
+          autoCorrect={false}
+        />
+        {showToggle && (
+          <TouchableOpacity onPress={showToggle.toggle}>
+            <Text style={styles.eyeIcon}>{showToggle.show ? '👁' : '🙈'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+};
+
 export function RegisterScreen({ navigation, route }: Props) {
   const role = route?.params?.role || 'teacher';
   const [name, setName] = useState('');
@@ -20,7 +55,6 @@ export function RegisterScreen({ navigation, route }: Props) {
   const [agreed, setAgreed] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
-  const [focused, setFocused] = useState<string | null>(null);
 
   const dispatch = useDispatch<any>();
   const { isLoading, error } = useSelector((s: RootState) => s.auth);
@@ -39,37 +73,6 @@ export function RegisterScreen({ navigation, route }: Props) {
       role,
     }));
   };
-
-  const InputField = ({
-    label, value, onChange, placeholder, secure, showToggle, onToggle, keyboardType, id,
-  }: any) => (
-    <View style={styles.inputGroup}>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <View style={[
-        styles.inputWrapper,
-        focused === id && styles.inputWrapperFocused,
-      ]}>
-        <TextInput
-          style={styles.input}
-          placeholder={placeholder}
-          placeholderTextColor={COLORS.inputPlaceholder}
-          value={value}
-          onChangeText={onChange}
-          onFocus={() => setFocused(id)}
-          onBlur={() => setFocused(null)}
-          secureTextEntry={secure && !showToggle?.show}
-          keyboardType={keyboardType || 'default'}
-          autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
-          autoCorrect={false}
-        />
-        {showToggle && (
-          <TouchableOpacity onPress={showToggle.toggle}>
-            <Text style={styles.eyeIcon}>{showToggle.show ? '👁' : '🙈'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
 
   return (
     <KeyboardAvoidingView

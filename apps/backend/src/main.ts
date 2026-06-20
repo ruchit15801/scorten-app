@@ -3,7 +3,7 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import * as helmet from 'helmet';
+import helmet from 'helmet';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
 

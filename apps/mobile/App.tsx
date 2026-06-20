@@ -12,6 +12,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 
 LogBox.ignoreLogs([
   'Non-serializable values were found in the navigation state',
+  'new NativeEventEmitter',
 ]);
 
 function App(): React.JSX.Element {

@@ -20,5 +20,10 @@
   "engines": {
     "node": ">=18.0.0",
     "yarn": ">=1.22.0"
+  },
+  "dependencies": {
+    "metro": "^0.84.4",
+    "metro-config": "^0.84.4",
+    "metro-runtime": "^0.84.4"
   }
 }

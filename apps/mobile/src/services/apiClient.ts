@@ -1,10 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
-import { MMKV } from 'react-native-mmkv';
-
-const storage = new MMKV({ id: 'scorten-auth' });
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = __DEV__
-  ? 'http://10.0.2.2:3000/api/v1'   // Android emulator → localhost
+  ? 'http://192.168.1.4:3000/api/v1'   // Physical Device -> Local PC IP
   : 'https://api.scorten.com/api/v1';
 
 export const apiClient: AxiosInstance = axios.create({
@@ -17,8 +15,8 @@ export const apiClient: AxiosInstance = axios.create({
 
 // Request interceptor - attach JWT token
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = storage.getString('accessToken');
+  async (config: InternalAxiosRequestConfig) => {
+    const token = await AsyncStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -37,13 +35,13 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = storage.getString('refreshToken');
+        const refreshToken = await AsyncStorage.getItem('refreshToken');
         if (!refreshToken) throw new Error('No refresh token');
 
         const { data } = await axios.post(`${BASE_URL}/auth/refresh-token`, { refreshToken });
 
-        storage.set('accessToken', data.data.accessToken);
-        storage.set('refreshToken', data.data.refreshToken);
+        await AsyncStorage.setItem('accessToken', data.data.accessToken);
+        await AsyncStorage.setItem('refreshToken', data.data.refreshToken);
 
         originalRequest.headers = {
           ...originalRequest.headers,
@@ -52,9 +50,8 @@ apiClient.interceptors.response.use(
 
         return apiClient(originalRequest);
       } catch {
-        storage.delete('accessToken');
-        storage.delete('refreshToken');
-        // Navigate to login - emit event
+        await AsyncStorage.removeItem('accessToken');
+        await AsyncStorage.removeItem('refreshToken');
       }
     }
 

@@ -16,6 +16,10 @@ import {
   OnboardingStep1,
   OnboardingStep2,
   OnboardingStep3,
+  OnboardingStep4,
+  OnboardingStep5,
+  OnboardingStep6,
+  ProfileScoreRevealScreen,
 } from '../screens/auth/OnboardingScreens';
 
 // Main Navigators
@@ -49,6 +53,10 @@ export function RootNavigator() {
             <Stack.Screen name="OnboardingStep1" component={OnboardingStep1} />
             <Stack.Screen name="OnboardingStep2" component={OnboardingStep2} />
             <Stack.Screen name="OnboardingStep3" component={OnboardingStep3} />
+            <Stack.Screen name="OnboardingStep4" component={OnboardingStep4} />
+            <Stack.Screen name="OnboardingStep5" component={OnboardingStep5} />
+            <Stack.Screen name="OnboardingStep6" component={OnboardingStep6} />
+            <Stack.Screen name="ProfileScoreReveal" component={ProfileScoreRevealScreen} />
           </>
         ) : user?.role === 'teacher' ? (
           // ─── Teacher App ──────────────────────────────────────────────────

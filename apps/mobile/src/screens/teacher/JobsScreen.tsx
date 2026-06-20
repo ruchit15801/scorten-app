@@ -39,9 +39,16 @@ function JobCard({ job, onPress, isSaved, onSave }: any) {
           <Text style={styles.schoolName}>{job.schoolId?.schoolName || 'School'}</Text>
           <Text style={styles.location}>📍 {job.city}, {job.state}</Text>
         </View>
-        <TouchableOpacity style={styles.saveBtn} onPress={() => onSave(job._id)}>
-          <Text style={{ fontSize: 20 }}>{isSaved ? '❤️' : '🤍'}</Text>
-        </TouchableOpacity>
+        <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <TouchableOpacity style={styles.saveBtn} onPress={() => onSave(job._id)}>
+            <Text style={{ fontSize: 20 }}>{isSaved ? '❤️' : '🤍'}</Text>
+          </TouchableOpacity>
+          {job.matchScore && (
+            <View style={styles.aiBadge}>
+              <Text style={styles.aiBadgeText}>🤖 {job.matchScore}% Match</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={styles.jobDivider} />
@@ -55,9 +62,6 @@ function JobCard({ job, onPress, isSaved, onSave }: any) {
         <View style={styles.tag}>
           <Text style={styles.tagText}>{job.jobType?.replace('_', ' ')}</Text>
         </View>
-        <View style={styles.tag}>
-          <Text style={styles.tagText}>{job.subjects?.[0]}</Text>
-        </View>
         <Text style={styles.appsCount}>
           {job.totalApplications || 0} applicants
         </Text>
@@ -70,25 +74,25 @@ const MOCK_JOBS = [
   {
     _id: '1', title: 'Senior Mathematics Teacher', isFeatured: true,
     subjects: ['Mathematics'], city: 'New Delhi', state: 'Delhi',
-    jobType: 'full_time', salaryMin: 35000, salaryMax: 55000,
+    jobType: 'full_time', salaryMin: 35000, salaryMax: 55000, matchScore: 95,
     totalApplications: 24, schoolId: { schoolName: 'Delhi Public School', rating: 4.5 },
   },
   {
     _id: '2', title: 'English & Literature Teacher', isFeatured: false,
     subjects: ['English'], city: 'Mumbai', state: 'Maharashtra',
-    jobType: 'full_time', salaryMin: 40000, salaryMax: 60000,
+    jobType: 'full_time', salaryMin: 40000, salaryMax: 60000, matchScore: 82,
     totalApplications: 18, schoolId: { schoolName: "St. Xavier's School", rating: 4.8 },
   },
   {
     _id: '3', title: 'Physics Teacher - JEE Focus', isFeatured: true,
     subjects: ['Physics'], city: 'Kota', state: 'Rajasthan',
-    jobType: 'full_time', salaryMin: 50000, salaryMax: 80000,
+    jobType: 'full_time', salaryMin: 50000, salaryMax: 80000, matchScore: 88,
     totalApplications: 42, schoolId: { schoolName: 'Allen Career Institute', rating: 4.9 },
   },
   {
     _id: '4', title: 'Primary School Hindi Teacher', isFeatured: false,
     subjects: ['Hindi'], city: 'Ahmedabad', state: 'Gujarat',
-    jobType: 'part_time', salaryMin: 20000, salaryMax: 32000,
+    jobType: 'part_time', salaryMin: 20000, salaryMax: 32000, matchScore: 65,
     totalApplications: 9, schoolId: { schoolName: 'Navrachna School', rating: 4.2 },
   },
 ];
@@ -121,20 +125,25 @@ export function JobsScreen({ navigation }: any) {
 
       {/* Search */}
       <View style={styles.searchArea}>
-        <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search jobs, schools..."
-            placeholderTextColor={COLORS.inputPlaceholder}
-            value={search}
-            onChangeText={setSearch}
-          />
-          {!!search && (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Text style={{ fontSize: 18, color: COLORS.textMuted }}>✕</Text>
-            </TouchableOpacity>
-          )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: SPACING.screen, gap: 12, marginBottom: 12 }}>
+          <View style={[styles.searchBar, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search jobs, schools..."
+              placeholderTextColor={COLORS.inputPlaceholder}
+              value={search}
+              onChangeText={setSearch}
+            />
+            {!!search && (
+              <TouchableOpacity onPress={() => setSearch('')}>
+                <Text style={{ fontSize: 18, color: COLORS.textMuted }}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('JobFilters')}>
+            <Text style={{ fontSize: 20 }}>⚙️</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Subject filters */}
@@ -209,6 +218,13 @@ const styles = StyleSheet.create({
   },
   searchIcon: { fontSize: 16 },
   searchInput: { flex: 1, fontSize: 15, color: COLORS.text, paddingVertical: 12 },
+  filterBtn: { 
+    width: 48, height: 48, borderRadius: RADIUS.xl, 
+    backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: COLORS.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  },
 
   filterRow: { paddingHorizontal: SPACING.screen, gap: 8 },
   filterChip: {
@@ -237,6 +253,14 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#FDE68A',
   },
   featuredText: { fontSize: 12, color: '#92400E', fontWeight: '700' },
+
+  aiBadge: {
+    backgroundColor: '#E8F4FD',
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    borderWidth: 1, borderColor: '#BAE6FD',
+  },
+  aiBadgeText: { fontSize: 11, color: '#0369A1', fontWeight: '700' },
 
   jobTop: { flexDirection: 'row', gap: 12, marginBottom: 14 },
   schoolLogo: {

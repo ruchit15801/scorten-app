@@ -34,10 +34,10 @@ export class Teacher {
   @Prop([String])
   boards: string[];
 
-  @Prop({ type: [{ enum: TeachingLevel }] })
+  @Prop({ type: [String], enum: Object.values(TeachingLevel) })
   teachingLevels: TeachingLevel[];
 
-  @Prop({ type: [{ enum: EmploymentType }] })
+  @Prop({ type: [String], enum: Object.values(EmploymentType) })
   preferredEmploymentTypes: EmploymentType[];
 
   @Prop()
@@ -70,7 +70,7 @@ export class Teacher {
   @Prop([String])
   languages: string[];
 
-  @Prop([String])
+  @Prop({ type: [String], default: [] })
   certifications: string[];
 
   @Prop([

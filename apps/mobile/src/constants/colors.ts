@@ -26,6 +26,7 @@ export const COLORS = {
 
   // Status
   success: '#10B981',
+  successDark: '#047857',
   successBg: '#ECFDF5',
   error: '#FF4D4F',
   errorBg: '#FFF1F0',
@@ -49,6 +50,12 @@ export const COLORS = {
   gradientPrimary: ['#7B61FF', '#6C5CE7'] as [string, string],
   gradientBg: ['#FAF9FF', '#EDE9FF'] as [string, string],
   gradientCard: ['#FFFFFF', '#F5F3FF'] as [string, string],
+  // Status extended
+  successLight: '#34D399',
+  errorLight: '#FF7875',
+  warningDark: '#D97706',
+  infoBg: '#EFF6FF',
+  infoDark: '#1D4ED8',
 } as const;
 
 export const FONTS = {
